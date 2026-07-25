@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Configurações - Tatico AutoClicker</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    button:hover { background-color: #0056b3; }
+    #status { margin-top: 15px; color: green; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Configurações da TV</h2>
+  
+  <div class="form-group">
+    <label for="nomeLoja">Nome da Loja:</label>
+    <input type="text" id="nomeLoja" placeholder="Ex: GARAVELO">
+  </div>
+  
+  <div class="form-group">
+    <label for="tipoTv">Tipo de TV:</label>
+    <select id="tipoTv">
+      <option value="Padaria">Padaria</option>
+      <option value="Açougue">Açougue</option>
+    </select>
+  </div>
+  
+  <div class="form-group">
+    <label for="linkPbi">Link do Power BI:</label>
+    <input type="url" id="linkPbi" placeholder="https://app.powerbi.com/view?r=...">
+  </div>
+  
+  <button id="salvar">Salvar Configurações</button>
+  <div id="status"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>
