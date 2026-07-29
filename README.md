@@ -1,9 +1,9 @@
 # Instale a ferramenta git na máquina
 $ sudo apt update && sudo apt install git -y
 
-# Crie uma pasta em Documentos para o repositório e navegue até a mesma 
+# Crie uma pasta em Documentos para o repositório e navegue até a mesma
 
-$ sudo mkdir ~/Documents/Extensões && cd ~/Documents/Extensões
+$ sudo mkdir ~/tatico_extensions && cd ~/tatico_extensions
 
 # Faça o download do repositório da extensão com o comando:
 $ git clone https://github.com/Pedrohrn/taticoAutoClicker.git
@@ -16,7 +16,7 @@ $ git clone https://github.com/Pedrohrn/taticoAutoClicker.git
 
 <img width="1919" height="570" alt="image" src="https://github.com/user-attachments/assets/3cd837ab-e4ea-4cdc-92a6-7fdcc515ac80" />
 
-# Navegue até a pasta onde a extensão foi baixada e selecione a pasta do taticoAutoClicker (se o passo a passo foi seguido corretamente, a pasta estará em Documents/Extensões/)
+# Navegue até a pasta onde a extensão foi baixada e selecione a pasta do taticoAutoClicker (se o passo a passo foi seguido corretamente, a pasta estará em tatico_extensions/)
 
 # Depois que a extensão for carregada corretamente para o Chrome, clique no ícone de extensões na barra de tarefas do navegador -> localize a extensão clique em "Fixar" para que ela fique fixa e vísivel
 
@@ -33,3 +33,7 @@ $ git clone https://github.com/Pedrohrn/taticoAutoClicker.git
 # A extensão só funciona nas telas do PowerBI. O tempo atual de refresh automático da tela é de 60 minutos. O tempo que aparece na logo da extensão é atualizado a cada 5 segundos para poupar recursos do navegador e sistema
 
 <img width="365" height="251" alt="image" src="https://github.com/user-attachments/assets/5ecca156-ab13-432a-8ca1-073bbe61af12" />
+
+
+# ou pule todo esse passo a passo e instale automaticamente copiando e colando no terminal da maquina
+curl -s https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh | bash

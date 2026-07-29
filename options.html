@@ -1,42 +1,144 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <title>Configurações - Tatico AutoClicker</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-    button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
-    button:hover { background-color: #0056b3; }
-    #status { margin-top: 15px; color: green; font-weight: bold; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f4f9;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .logo-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .logo-container img {
+      max-width: 150px;
+      height: auto;
+    }
+
+    h2 {
+      text-align: center;
+      color: #333;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 600;
+      color: #555;
+      font-size: 14px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: #d11c1c;
+      outline: none;
+    }
+
+    .time-inputs {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #d11c1c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+      transition: background-color 0.2s;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #a31515;
+    }
+
+    #status {
+      margin-top: 15px;
+      font-weight: bold;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    .error {
+      border-color: #dc3545 !important;
+    }
   </style>
 </head>
-<body>
-  <h2>Configurações da TV</h2>
-  
-  <div class="form-group">
-    <label for="nomeLoja">Nome da Loja:</label>
-    <input type="text" id="nomeLoja" placeholder="Ex: GARAVELO">
-  </div>
-  
-  <div class="form-group">
-    <label for="tipoTv">Tipo de TV:</label>
-    <select id="tipoTv">
-      <option value="Padaria">Padaria</option>
-      <option value="Açougue">Açougue</option>
-    </select>
-  </div>
-  
-  <div class="form-group">
-    <label for="linkPbi">Link do Power BI:</label>
-    <input type="url" id="linkPbi" placeholder="https://app.powerbi.com/view?r=...">
-  </div>
-  
-  <button id="salvar">Salvar Configurações</button>
-  <div id="status"></div>
 
+<body>
+  <div class="container">
+    <div class="logo-container">
+      <img src="logo.png" alt="Tatico">
+    </div>
+    <h2>Painel de Configurações</h2>
+
+    <div class="form-group">
+      <label for="nomeLoja">Loja:</label>
+      <select id="nomeLoja">
+        <option value="CAMPINAS" selected>CAMPINAS</option>
+        <option value="GARAVELO">GARAVELO</option>
+        <option value="PORTAL">PORTAL</option>
+        <option value="PAPILLON">PAPILLON</option>
+        <option value="T7">T7</option>
+        <option value="CENTRO">CENTRO</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="linkPbi">Link do Power BI:</label>
+      <input type="url" id="linkPbi" placeholder="https://app.powerbi.com/view?r=...">
+    </div>
+
+    <div class="form-group">
+      <label>Temporizador:</label>
+      <div class="time-inputs">
+        <input type="number" id="tempoMinutos" placeholder="Minutos" min="0" max="1440">
+        <input type="number" id="tempoSegundos" placeholder="Segundos" min="0" max="59">
+      </div>
+    </div>
+
+    <button id="salvar">Salvar Configurações</button>
+    <div id="status"></div>
+  </div>
   <script src="options.js"></script>
 </body>
+
 </html>
