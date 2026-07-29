@@ -35,12 +35,12 @@ chrome.storage.local.get(['nomeLoja', 'linkPbi', 'tempoMinutos', 'tempoSegundos'
   async function abrirMenu() {
     try {
       console.log("Procurando botão do menu...");
-      const menu = await esperarElemento(".thumbnail-image");
-      menu.click();
+      const botaoMenu = await esperarElemento(".thumbnail-image");
+      botaoMenu.click();
       menuAberto = true;
       setTimeout(() => {
         nextPanel();
-      }, 1000);
+      }, 2000);
     }
     catch (erro) {
       console.log(erro);
@@ -49,13 +49,18 @@ chrome.storage.local.get(['nomeLoja', 'linkPbi', 'tempoMinutos', 'tempoSegundos'
 
   async function nextPanel() {
     try {
-      if (!document.body.innerText.includes(nomeLoja)) {
-        const seta = await esperarElemento(".pbi-glyph-chevronrightmedium");
-        console.log("Avançando painel procurando por: " + nomeLoja);
-        seta.click();
+      const labelAcompanhamento = "ACOMPANHAMENTO VENDA"
+      if (document.body.innerText.includes(labelAcompanhamento)) {
+        if (!document.body.innerText.includes(nomeLoja)) {
+          const seta = await esperarElemento(".pbi-glyph-chevronrightmedium");
+          console.log("Avançando painel procurando por: " + nomeLoja);
+          seta.click();
 
+          setTimeout(nextPanel, 2000);
+          return;
+        }
+      } else {
         setTimeout(nextPanel, 2000);
-        return;
       }
     }
     catch (erro) {
