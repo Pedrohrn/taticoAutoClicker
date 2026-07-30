@@ -154,6 +154,15 @@
       margin-bottom: 15px;
     }
 
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+    }
+
     .btn-danger-sm {
       padding: 5px 10px;
       background-color: #dc3545;
@@ -164,22 +173,22 @@
       font-size: 12px;
     }
 
-    /* tabela de playlists */
-    .playlist-table {
+    /* tabelas padronizadas */
+    .data-table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
     }
 
-    .playlist-table th,
-    .playlist-table td {
+    .data-table th,
+    .data-table td {
       border: 1px solid #e0e0e0;
       padding: 10px;
       text-align: left;
       font-size: 13px;
     }
 
-    .playlist-table th {
+    .data-table th {
       background-color: #f8f9fa;
     }
 
@@ -258,37 +267,69 @@
     </div>
 
     <div id="tab-revolver" class="tab-content">
-      <h2>Auto Tab Revolver (Playlist de Abas)</h2>
 
-      <button id="btnCapturarJanela" class="btn-secondary">Salvar guias da janela atual como playlist</button>
+      <div id="listaPlaylistsContainer">
+        <h2>Gerenciador de Playlists</h2>
+        <button id="btnNovaPlaylist" class="btn-secondary" style="background-color: #28a745;">+ Criar Nova
+          Playlist</button>
 
-      <div class="bulk-actions">
-        <button id="btnMarcarTodos" class="btn-secondary" style="background-color: #6c757d;">Marcar/Desmarcar
-          Todos</button>
-        <button id="btnRemoverSelecionados" class="btn-danger-sm">Remover Selecionados</button>
+        <table class="data-table" id="tabelaPlaylists">
+          <thead>
+            <tr>
+              <th>Nome da Playlist</th>
+              <th style="width: 120px;">Status</th>
+              <th style="width: 200px; text-align: center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="listaPlaylistsBody">
+          </tbody>
+        </table>
       </div>
 
-      <table class="playlist-table">
-        <thead>
-          <tr>
-            <th style="width: 30px;"><input type="checkbox" id="chkSelectAll"></th>
-            <th style="width: 30px;">#</th>
-            <th>URL</th>
-            <th style="width: 120px;">Tempo (M:S)</th>
-            <th style="width: 60px;">Ativa</th>
-            <th style="width: 80px;">Principal</th>
-            <th style="width: 60px;">Ação</th>
-          </tr>
-        </thead>
-        <tbody id="playlistBody">
-        </tbody>
-      </table>
+      <div id="detalhesPlaylistContainer" style="display: none;">
+        <h2 style="display: flex; justify-content: space-between; align-items: center;">
+          Editando Playlist
+          <button id="btnVoltarPlaylists" class="btn-sm" style="background-color: #6c757d;">Voltar</button>
+        </h2>
 
-      <br>
-      <button id="btnAdicionarItem" class="btn-secondary" style="background-color: #28a745;">+ Adicionar Nova
-        URL</button>
-      <br><br>
-      <button id="salvarRevolver" class="btn-submit">Salvar Playlist e Estado</button>
+        <div class="form-group">
+          <label for="inputNomePlaylist">Nome da Playlist:</label>
+          <input type="text" id="inputNomePlaylist" placeholder="Ex: Dashboards Padaria">
+        </div>
+
+        <h3 style="font-size: 16px; margin-top: 20px; color: #555;">Itens da Playlist</h3>
+
+        <button id="btnCapturarJanela" class="btn-secondary">Salvar guias da janela atual</button>
+
+        <div class="bulk-actions">
+          <button id="btnMarcarTodos" class="btn-secondary"
+            style="background-color: #6c757d; margin-bottom: 0;">Ativar/Desativar Todos</button>
+          <button id="btnRemoverSelecionados" class="btn-danger-sm">Remover Selecionados</button>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 30px;"><input type="checkbox" id="chkSelectAll"></th>
+              <th style="width: 30px;">#</th>
+              <th>URL</th>
+              <th style="width: 120px;">Tempo (M:S)</th>
+              <th style="width: 60px;">Ativa</th>
+              <th style="width: 80px;">Principal</th>
+              <th style="width: 60px;">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="playlistItensBody">
+          </tbody>
+        </table>
+
+        <br>
+        <button id="btnAdicionarItem" class="btn-secondary" style="background-color: #28a745;">+ Adicionar Nova
+          URL</button>
+        <br><br>
+        <button id="salvarRevolver" class="btn-submit">Salvar Alterações da Playlist</button>
+      </div>
+
     </div>
 
     <div id="status"></div>

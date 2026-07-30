@@ -1,7 +1,6 @@
 let revolverIntervalo = null;
 let abaAtualIndex = 0;
 
-// inicializo ouvintes de mensagens enviadas pelos scripts de conteudo e popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "updateBadge") {
     chrome.action.setBadgeText({
@@ -15,19 +14,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
   }
 
-  if (request.action === "iniciarRevolver") {
-    iniciarRotacaoAbas();
-    sendResponse({ status: "executando" });
-  }
-
-  if (request.action === "pararRevolver") {
-    pararRotacaoAbas();
-    sendResponse({ status: "parado" });
-  }
-
   if (request.action === "obterStatusRevolver") {
     sendResponse({ rodando: revolverIntervalo !== null });
   }
+
   return true;
 });
 
@@ -43,11 +33,23 @@ function pararRotacaoAbas() {
 function iniciarRotacaoAbas() {
   pararRotacaoAbas();
 
-  chrome.storage.local.get(['revolverAtivo', 'playlists'], (data) => {
-    if (!data.revolverAtivo) return;
+  chrome.storage.local.get(['revolverAtivo', 'playlistIdAtiva', 'playlists'], (data) => {
+    // verifico se o revolver esta globalmente ativo e se ha uma playlist amarrada a ele
+    if (!data.revolverAtivo || !data.playlistIdAtiva) {
+      pararRotacaoAbas();
+      return;
+    }
 
     const playlists = data.playlists || [];
-    const itensAtivos = playlists.filter(item => item.ativo);
+    const playlistAtual = playlists.find(p => p.id === data.playlistIdAtiva);
+
+    // previno falhas caso a playlist selecionada nao exista ou nao possua a chave itens
+    if (!playlistAtual || !playlistAtual.itens) {
+      pararRotacaoAbas();
+      return;
+    }
+
+    const itensAtivos = playlistAtual.itens.filter(item => item.ativo);
 
     if (itensAtivos.length === 0) {
       pararRotacaoAbas();
@@ -64,7 +66,6 @@ function iniciarRotacaoAbas() {
     chrome.action.setBadgeText({ text: "ON" });
     chrome.action.setBadgeBackgroundColor({ color: "#28a745" });
 
-    // busco todas as abas da janela atual para navegar
     chrome.tabs.query({ currentWindow: true }, (tabs) => {
       const abaAlvo = tabs.find(t => t.url && t.url.includes(itemAtual.url));
 
@@ -80,13 +81,27 @@ function iniciarRotacaoAbas() {
   });
 }
 
-// monitoro alteracao do storage para ligar ou desligar dinamicamente o revolver
+// associo o listener do storage para reagir a play/stop via options.js ou popup
 chrome.storage.onChanged.addListener((changes, namespace) => {
-  if (namespace === 'local' && changes.revolverAtivo) {
-    if (changes.revolverAtivo.newValue) {
-      iniciarRotacaoAbas();
-    } else {
-      pararRotacaoAbas();
+  if (namespace === 'local') {
+    // verifico se houve alteracao no status global, no id ativo ou no array de dados
+    if (changes.revolverAtivo || changes.playlistIdAtiva || changes.playlists) {
+      chrome.storage.local.get(['revolverAtivo'], (data) => {
+        if (data.revolverAtivo) {
+          // zero o indice para evitar saltos inconsistentes de troca ao vivo
+          abaAtualIndex = 0;
+          iniciarRotacaoAbas();
+        } else {
+          pararRotacaoAbas();
+        }
+      });
     }
+  }
+});
+
+// forco inicializacao no boot caso tenha sido persistido estado anterior rodando
+chrome.storage.local.get(['revolverAtivo'], (data) => {
+  if (data.revolverAtivo) {
+    iniciarRotacaoAbas();
   }
 });

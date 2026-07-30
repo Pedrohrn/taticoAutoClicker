@@ -1,10 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // seletores do menu lateral
+  // seletores globais do menu
   const navBtns = document.querySelectorAll('.nav-btn');
   const tabContents = document.querySelectorAll('.tab-content');
   const btnExportar = document.getElementById('btnExportar');
   const btnImportar = document.getElementById('btnImportar');
   const fileImportar = document.getElementById('fileImportar');
+  const status = document.getElementById('status');
 
   // seletores da aba autoclicker
   const nomeLojaInput = document.getElementById('nomeLoja');
@@ -12,10 +13,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const tempoMinutosInput = document.getElementById('tempoMinutos');
   const tempoSegundosInput = document.getElementById('tempoSegundos');
   const salvarAutoClickerBtn = document.getElementById('salvarAutoClicker');
-  const status = document.getElementById('status');
 
-  // seletores da aba revolver
-  const playlistBody = document.getElementById('playlistBody');
+  // seletores principais da aba revolver (listagem)
+  const listaPlaylistsContainer = document.getElementById('listaPlaylistsContainer');
+  const detalhesPlaylistContainer = document.getElementById('detalhesPlaylistContainer');
+  const btnNovaPlaylist = document.getElementById('btnNovaPlaylist');
+  const listaPlaylistsBody = document.getElementById('listaPlaylistsBody');
+  const tabelaPlaylists = document.getElementById('tabelaPlaylists');
+
+  // seletores internos da aba revolver (edicao)
+  const btnVoltarPlaylists = document.getElementById('btnVoltarPlaylists');
+  const inputNomePlaylist = document.getElementById('inputNomePlaylist');
+  const playlistItensBody = document.getElementById('playlistItensBody');
   const btnCapturarJanela = document.getElementById('btnCapturarJanela');
   const btnAdicionarItem = document.getElementById('btnAdicionarItem');
   const btnMarcarTodos = document.getElementById('btnMarcarTodos');
@@ -23,9 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const chkSelectAll = document.getElementById('chkSelectAll');
   const salvarRevolverBtn = document.getElementById('salvarRevolver');
 
-  let playlistLocal = [];
+  // variaveis de estado global do script
+  let playlistsSalvas = [];
+  let playlistEmEdicaoId = null;
+  let estadoRevolver = { ativo: false, playlistId: null };
+  let dragSrcIndex = null;
 
-  // navegacao entre abas laterais
   navBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       if (btn.id === 'btnExportar' || btn.id === 'btnImportar') return;
@@ -38,22 +50,132 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // carrega configuracoes salvas do chrome.storage
-  chrome.storage.local.get(['nomeLoja', 'linkPbi', 'tempoMinutos', 'tempoSegundos', 'playlists'], (result) => {
+  chrome.storage.local.get(['nomeLoja', 'linkPbi', 'tempoMinutos', 'tempoSegundos', 'playlists', 'revolverAtivo', 'playlistIdAtiva'], (result) => {
     nomeLojaInput.value = result.nomeLoja || 'CAMPINAS';
     if (result.linkPbi) linkPbiInput.value = result.linkPbi;
     tempoMinutosInput.value = result.tempoMinutos !== undefined ? result.tempoMinutos : 60;
     tempoSegundosInput.value = result.tempoSegundos !== undefined ? result.tempoSegundos : 0;
 
-    playlistLocal = result.playlists || [];
-    renderizarPlaylist();
+    playlistsSalvas = result.playlists || [];
+    estadoRevolver.ativo = result.revolverAtivo || false;
+    estadoRevolver.playlistId = result.playlistIdAtiva || null;
+
+    renderizarListaPlaylists();
   });
 
-  // renderizacao da tabela de playlist com suporte a drag and drop
-  function renderizarPlaylist() {
-    playlistBody.innerHTML = '';
 
-    playlistLocal.forEach((item, index) => {
+  function renderizarListaPlaylists() {
+    listaPlaylistsBody.innerHTML = '';
+
+    if (playlistsSalvas.length === 0) {
+      listaPlaylistsBody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#888;">Nenhuma playlist cadastrada.</td></tr>`;
+      return;
+    }
+
+    playlistsSalvas.forEach(pl => {
+      const isRunning = (estadoRevolver.ativo && estadoRevolver.playlistId === pl.id);
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td style="font-weight: 500;">${pl.nome || 'Playlist Sem Nome'}</td>
+        <td style="font-weight: bold; color: ${isRunning ? '#28a745' : '#6c757d'}">${isRunning ? 'Executando' : 'Parada'}</td>
+        <td style="text-align: center; gap: 5px; display: flex; justify-content: center;">
+          <button class="btn-sm btn-editar-pl" data-id="${pl.id}" style="background-color: #007bff;">Editar</button>
+          <button class="btn-sm btn-toggle-pl" data-id="${pl.id}" style="background-color: ${isRunning ? '#ffc107' : '#28a745'}; color: ${isRunning ? '#000' : '#fff'}; width: 70px;">
+            ${isRunning ? 'Parar' : 'Iniciar'}
+          </button>
+          <button class="btn-sm btn-remover-pl" data-id="${pl.id}" style="background-color: #dc3545;">Excluir</button>
+        </td>
+      `;
+      listaPlaylistsBody.appendChild(tr);
+    });
+  }
+
+  btnNovaPlaylist.addEventListener('click', () => {
+    const novaPl = {
+      id: Date.now().toString(),
+      nome: `Nova Playlist ${playlistsSalvas.length + 1}`,
+      itens: []
+    };
+    playlistsSalvas.push(novaPl);
+
+    chrome.storage.local.set({ playlists: playlistsSalvas }, () => {
+      renderizarListaPlaylists();
+      abrirEdicaoPlaylist(novaPl.id);
+    });
+  });
+
+  tabelaPlaylists.addEventListener('click', (e) => {
+    const idAlvo = e.target.dataset.id;
+    if (!idAlvo) return;
+
+    if (e.target.classList.contains('btn-editar-pl')) {
+      abrirEdicaoPlaylist(idAlvo);
+    }
+    else if (e.target.classList.contains('btn-remover-pl')) {
+      if (confirm('Tem certeza que deseja excluir esta playlist?')) {
+        // caso o usuario remova a playlist que esta em execucao, eu interrompo a execucao por seguranca
+        if (estadoRevolver.playlistId === idAlvo) {
+          estadoRevolver.ativo = false;
+          estadoRevolver.playlistId = null;
+          chrome.storage.local.set({ revolverAtivo: false, playlistIdAtiva: null });
+        }
+
+        playlistsSalvas = playlistsSalvas.filter(p => p.id !== idAlvo);
+        chrome.storage.local.set({ playlists: playlistsSalvas }, () => {
+          renderizarListaPlaylists();
+        });
+      }
+    }
+    else if (e.target.classList.contains('btn-toggle-pl')) {
+      if (estadoRevolver.ativo && estadoRevolver.playlistId === idAlvo) {
+        estadoRevolver.ativo = false;
+        estadoRevolver.playlistId = null;
+      } else {
+        estadoRevolver.ativo = true;
+        estadoRevolver.playlistId = idAlvo;
+      }
+
+      chrome.storage.local.set({
+        revolverAtivo: estadoRevolver.ativo,
+        playlistIdAtiva: estadoRevolver.playlistId
+      }, () => {
+        renderizarListaPlaylists();
+      });
+    }
+  });
+
+
+  function abrirEdicaoPlaylist(id) {
+    playlistEmEdicaoId = id;
+    const pl = playlistsSalvas.find(p => p.id === id);
+    if (!pl) return;
+
+    inputNomePlaylist.value = pl.nome;
+    listaPlaylistsContainer.style.display = 'none';
+    detalhesPlaylistContainer.style.display = 'block';
+
+    renderizarItensPlaylist();
+  }
+
+  btnVoltarPlaylists.addEventListener('click', () => {
+    // salvo implicitamente se houver edicao de nome solta antes de sair
+    sincronizarCamposDomParaArray();
+    chrome.storage.local.set({ playlists: playlistsSalvas });
+
+    playlistEmEdicaoId = null;
+    detalhesPlaylistContainer.style.display = 'none';
+    listaPlaylistsContainer.style.display = 'block';
+
+    renderizarListaPlaylists();
+  });
+
+  function renderizarItensPlaylist() {
+    playlistItensBody.innerHTML = '';
+    const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
+    if (!pl || !pl.itens) return;
+
+    pl.itens.forEach((item, index) => {
       const tr = document.createElement('tr');
       tr.draggable = true;
       tr.dataset.index = index;
@@ -65,7 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>
           <div style="display:flex; gap: 4px;">
             <input type="number" class="item-min" value="${item.minutos || 0}" min="0" style="width: 50px;">
-            <input type="number" class="item-seg" value="${item.segundos || 10}" min="0" max="59" style="width: 50px;">
+            <input type="number" class="item-seg" value="${item.segundos !== undefined ? item.segundos : 10}" min="0" max="59" style="width: 50px;">
           </div>
         </td>
         <td style="text-align: center;">
@@ -79,18 +201,35 @@ document.addEventListener('DOMContentLoaded', () => {
         </td>
       `;
 
-      // eventos de drag e drop na tabela
       tr.addEventListener('dragstart', handleDragStart);
       tr.addEventListener('dragover', handleDragOver);
       tr.addEventListener('drop', handleDrop);
 
-      playlistBody.appendChild(tr);
+      playlistItensBody.appendChild(tr);
     });
 
     vincularEventosLinha();
   }
 
-  let dragSrcIndex = null;
+  // amrrando a atualizacao dos inputs soltos com o array da playlist
+  function sincronizarCamposDomParaArray() {
+    if (!playlistEmEdicaoId) return;
+    const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
+    if (!pl) return;
+
+    pl.nome = inputNomePlaylist.value;
+    const linhas = playlistItensBody.querySelectorAll('tr');
+
+    pl.itens = Array.from(linhas).map(tr => {
+      return {
+        url: tr.querySelector('.item-url').value,
+        minutos: parseInt(tr.querySelector('.item-min').value, 10) || 0,
+        segundos: parseInt(tr.querySelector('.item-seg').value, 10) || 0,
+        ativo: tr.querySelector('.item-ativo').checked,
+        principal: tr.querySelector('.item-principal').checked
+      };
+    });
+  }
 
   function handleDragStart(e) {
     dragSrcIndex = this.dataset.index;
@@ -109,53 +248,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (dragSrcIndex !== null && dragSrcIndex !== targetIndex) {
       sincronizarCamposDomParaArray();
-      const itemMovido = playlistLocal.splice(dragSrcIndex, 1)[0];
-      playlistLocal.splice(targetIndex, 0, itemMovido);
-      renderizarPlaylist();
+      const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
+      const itemMovido = pl.itens.splice(dragSrcIndex, 1)[0];
+      pl.itens.splice(targetIndex, 0, itemMovido);
+      renderizarItensPlaylist();
     }
     return false;
-  }
-
-  function sincronizarCamposDomParaArray() {
-    const linhas = playlistBody.querySelectorAll('tr');
-    linhas.forEach((tr, idx) => {
-      if (playlistLocal[idx]) {
-        playlistLocal[idx].url = tr.querySelector('.item-url').value;
-        playlistLocal[idx].minutos = parseInt(tr.querySelector('.item-min').value, 10) || 0;
-        playlistLocal[idx].segundos = parseInt(tr.querySelector('.item-seg').value, 10) || 0;
-        playlistLocal[idx].ativo = tr.querySelector('.item-ativo').checked;
-        playlistLocal[idx].principal = tr.querySelector('.item-principal').checked;
-      }
-    });
   }
 
   function vincularEventosLinha() {
     document.querySelectorAll('.btn-remover-linha').forEach(btn => {
       btn.addEventListener('click', (e) => {
         sincronizarCamposDomParaArray();
-        const idx = e.target.dataset.index;
-        playlistLocal.splice(idx, 1);
-        renderizarPlaylist();
+        const idx = parseInt(e.target.dataset.index, 10);
+        const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
+        pl.itens.splice(idx, 1);
+        renderizarItensPlaylist();
       });
     });
 
     document.querySelectorAll('.item-principal').forEach((radio, idx) => {
       radio.addEventListener('change', () => {
         sincronizarCamposDomParaArray();
-        playlistLocal.forEach((item, i) => {
+        const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
+        pl.itens.forEach((item, i) => {
           item.principal = (i === idx);
         });
       });
     });
   }
 
-  // captura de guias abertas na janela
   btnCapturarJanela.addEventListener('click', () => {
     chrome.tabs.query({ currentWindow: true }, (tabs) => {
       sincronizarCamposDomParaArray();
+      const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
+
       tabs.forEach(tab => {
         if (tab.url && !tab.url.startsWith('chrome://')) {
-          playlistLocal.push({
+          pl.itens.push({
             url: tab.url,
             minutos: 0,
             segundos: 15,
@@ -164,20 +294,22 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
       });
-      renderizarPlaylist();
+      renderizarItensPlaylist();
     });
   });
 
   btnAdicionarItem.addEventListener('click', () => {
     sincronizarCamposDomParaArray();
-    playlistLocal.push({
+    const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
+
+    pl.itens.push({
       url: '',
       minutos: 0,
       segundos: 10,
       ativo: true,
-      principal: playlistLocal.length === 0
+      principal: pl.itens.length === 0
     });
-    renderizarPlaylist();
+    renderizarItensPlaylist();
   });
 
   chkSelectAll.addEventListener('change', (e) => {
@@ -192,7 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
     checkboxes.forEach(chk => {
       chk.checked = !todosMarcados;
     });
-
     chkSelectAll.checked = !todosMarcados;
   });
 
@@ -205,11 +336,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (chk.checked) indicesParaRemover.push(idx);
     });
 
-    playlistLocal = playlistLocal.filter((_, idx) => !indicesParaRemover.includes(idx));
-    renderizarPlaylist();
+    const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
+    pl.itens = pl.itens.filter((_, idx) => !indicesParaRemover.includes(idx));
+
+    chkSelectAll.checked = false;
+    renderizarItensPlaylist();
   });
 
-  // salvamento do autoclicker
+  salvarRevolverBtn.addEventListener('click', () => {
+    sincronizarCamposDomParaArray();
+    chrome.storage.local.set({ playlists: playlistsSalvas }, () => {
+      mostrarStatus('Playlist de rotação salva com sucesso!', true);
+    });
+  });
+
   salvarAutoClickerBtn.addEventListener('click', () => {
     const min = parseInt(tempoMinutosInput.value, 10);
     const seg = parseInt(tempoSegundosInput.value, 10);
@@ -231,16 +371,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // salvamento da playlist do revolver
-  salvarRevolverBtn.addEventListener('click', () => {
-    sincronizarCamposDomParaArray();
-    chrome.storage.local.set({ playlists: playlistLocal }, () => {
-      mostrarStatus('Playlist de rotação salva com sucesso!', true);
-    });
-  });
-
   btnExportar.addEventListener('click', () => {
-    sincronizarCamposDomParaArray();
+    if (playlistEmEdicaoId) sincronizarCamposDomParaArray();
+
     chrome.storage.local.get(null, (items) => {
       const json = JSON.stringify(items, null, 2);
       const blob = new Blob([json], { type: 'application/json' });
@@ -278,7 +411,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
     reader.readAsText(file);
-
     e.target.value = '';
   });
 
