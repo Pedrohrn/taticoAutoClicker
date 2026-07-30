@@ -5,38 +5,88 @@
   <meta charset="UTF-8">
   <title>Configurações - Tatico AutoClicker</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background-color: #f4f4f9;
-      padding: 20px;
+      margin: 0;
+      padding: 0;
       display: flex;
-      justify-content: center;
+      height: 100vh;
     }
 
-    .container {
+    /* menu lateral estilo sidebar */
+    .sidebar {
+      width: 220px;
       background-color: #ffffff;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 400px;
+      border-right: 1px solid #e0e0e0;
+      padding: 20px 10px;
+      display: flex;
+      flex-direction: column;
     }
 
-    .logo-container {
+    .sidebar-logo {
       text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
     }
 
-    .logo-container img {
-      max-width: 150px;
+    .sidebar-logo img {
+      max-width: 130px;
       height: auto;
     }
 
+    .nav-btn {
+      background: none;
+      border: none;
+      padding: 12px 15px;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 600;
+      color: #555;
+      cursor: pointer;
+      border-radius: 6px;
+      margin-bottom: 5px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .nav-btn:hover {
+      background-color: #f0f0f0;
+    }
+
+    .nav-btn.active {
+      background-color: #d11c1c;
+      color: #ffffff;
+    }
+
+    /* area principal de conteudo */
+    .content {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+    }
+
+    .tab-content {
+      display: none;
+      max-width: 750px;
+      background: #ffffff;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
     h2 {
-      text-align: center;
+      margin-top: 0;
       color: #333;
-      font-size: 18px;
-      margin-bottom: 20px;
+      font-size: 20px;
+      border-bottom: 2px solid #f0f0f0;
+      padding-bottom: 10px;
     }
 
     .form-group {
@@ -55,7 +105,6 @@
     select {
       width: 100%;
       padding: 10px;
-      box-sizing: border-box;
       border: 1px solid #ccc;
       border-radius: 4px;
       font-size: 14px;
@@ -72,28 +121,80 @@
       gap: 10px;
     }
 
-    button {
-      width: 100%;
-      padding: 12px;
+    .btn-submit {
+      padding: 12px 20px;
       background-color: #d11c1c;
       color: white;
       border: none;
       border-radius: 4px;
       cursor: pointer;
       font-weight: bold;
-      font-size: 16px;
-      transition: background-color 0.2s;
-      margin-top: 10px;
+      font-size: 14px;
     }
 
-    button:hover {
+    .btn-submit:hover {
       background-color: #a31515;
+    }
+
+    .btn-secondary {
+      padding: 10px 15px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 15px;
+    }
+
+    .btn-danger-sm {
+      padding: 5px 10px;
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    /* tabela de playlists */
+    .playlist-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .playlist-table th,
+    .playlist-table td {
+      border: 1px solid #e0e0e0;
+      padding: 10px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .playlist-table th {
+      background-color: #f8f9fa;
+    }
+
+    .drag-handle {
+      cursor: move;
+      text-align: center;
+      font-weight: bold;
+      color: #888;
+    }
+
+    /* acoes em massa */
+    .bulk-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
     }
 
     #status {
       margin-top: 15px;
       font-weight: bold;
-      text-align: center;
       min-height: 20px;
     }
 
@@ -104,40 +205,84 @@
 </head>
 
 <body>
-  <div class="container">
-    <div class="logo-container">
+
+  <div class="sidebar">
+    <div class="sidebar-logo">
       <img src="logo.png" alt="Tatico">
     </div>
-    <h2>Painel de Configurações</h2>
+    <button class="nav-btn active" data-target="tab-autoclicker">AutoClicker</button>
+    <button class="nav-btn" data-target="tab-revolver">Auto Tab Revolver</button>
+  </div>
 
-    <div class="form-group">
-      <label for="nomeLoja">Loja:</label>
-      <select id="nomeLoja">
-        <option value="CAMPINAS" selected>CAMPINAS</option>
-        <option value="GARAVELO">GARAVELO</option>
-        <option value="PORTAL">PORTAL</option>
-        <option value="PAPILLON">PAPILLON</option>
-        <option value="T7">T7</option>
-        <option value="CENTRO">CENTRO</option>
-      </select>
-    </div>
+  <div class="content">
 
-    <div class="form-group">
-      <label for="linkPbi">Link do Power BI:</label>
-      <input type="url" id="linkPbi" placeholder="https://app.powerbi.com/view?r=...">
-    </div>
-
-    <div class="form-group">
-      <label>Temporizador:</label>
-      <div class="time-inputs">
-        <input type="number" id="tempoMinutos" placeholder="Minutos" min="0" max="1440">
-        <input type="number" id="tempoSegundos" placeholder="Segundos" min="0" max="59">
+    <div id="tab-autoclicker" class="tab-content active">
+      <h2>Configurações do AutoClicker</h2>
+      <div class="form-group">
+        <label for="nomeLoja">Loja:</label>
+        <select id="nomeLoja">
+          <option value="CAMPINAS" selected>CAMPINAS</option>
+          <option value="GARAVELO">GARAVELO</option>
+          <option value="PORTAL">PORTAL</option>
+          <option value="PAPILLON">PAPILLON</option>
+          <option value="T7">T7</option>
+          <option value="CENTRO">CENTRO</option>
+        </select>
       </div>
+
+      <div class="form-group">
+        <label for="linkPbi">Link do Power BI:</label>
+        <input type="url" id="linkPbi" placeholder="https://app.powerbi.com/view?r=...">
+      </div>
+
+      <div class="form-group">
+        <label>Temporizador (Refresh):</label>
+        <div class="time-inputs">
+          <input type="number" id="tempoMinutos" placeholder="Minutos" min="0" max="1440">
+          <input type="number" id="tempoSegundos" placeholder="Segundos" min="0" max="59">
+        </div>
+      </div>
+
+      <button id="salvarAutoClicker" class="btn-submit">Salvar AutoClicker</button>
     </div>
 
-    <button id="salvar">Salvar Configurações</button>
+    <div id="tab-revolver" class="tab-content">
+      <h2>Auto Tab Revolver (Playlist de Abas)</h2>
+
+      <button id="btnCapturarJanela" class="btn-secondary">Salvar guias da janela atual como playlist</button>
+
+      <div class="bulk-actions">
+        <button id="btnMarcarTodos" class="btn-secondary" style="background-color: #6c757d;">Marcar/Desmarcar
+          Todos</button>
+        <button id="btnRemoverSelecionados" class="btn-danger-sm">Remover Selecionados</button>
+      </div>
+
+      <table class="playlist-table">
+        <thead>
+          <tr>
+            <th style="width: 30px;"><input type="checkbox" id="chkSelectAll"></th>
+            <th style="width: 30px;">#</th>
+            <th>URL</th>
+            <th style="width: 120px;">Tempo (M:S)</th>
+            <th style="width: 60px;">Ativa</th>
+            <th style="width: 80px;">Principal</th>
+            <th style="width: 60px;">Ação</th>
+          </tr>
+        </thead>
+        <tbody id="playlistBody">
+        </tbody>
+      </table>
+
+      <br>
+      <button id="btnAdicionarItem" class="btn-secondary" style="background-color: #28a745;">+ Adicionar Nova
+        URL</button>
+      <br><br>
+      <button id="salvarRevolver" class="btn-submit">Salvar Playlist e Estado</button>
+    </div>
+
     <div id="status"></div>
   </div>
+
   <script src="options.js"></script>
 </body>
 
