@@ -50,19 +50,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  chrome.storage.local.get(['nomeLoja', 'linkPbi', 'tempoMinutos', 'tempoSegundos', 'playlists', 'revolverAtivo', 'playlistIdAtiva'], (result) => {
-    nomeLojaInput.value = result.nomeLoja || 'CAMPINAS';
-    if (result.linkPbi) linkPbiInput.value = result.linkPbi;
-    tempoMinutosInput.value = result.tempoMinutos !== undefined ? result.tempoMinutos : 60;
-    tempoSegundosInput.value = result.tempoSegundos !== undefined ? result.tempoSegundos : 0;
+  // busco o json injetado pelo bash antes de popular os campos predefinidos na view
+  fetch(chrome.runtime.getURL('config.json'))
+    .then(response => response.json())
+    .catch(() => ({}))
+    .then(configJson => {
+      chrome.storage.local.get(['nomeLoja', 'linkPbi', 'tempoMinutos', 'tempoSegundos', 'playlists', 'revolverAtivo', 'playlistIdAtiva'], (result) => {
 
-    playlistsSalvas = result.playlists || [];
-    estadoRevolver.ativo = result.revolverAtivo || false;
-    estadoRevolver.playlistId = result.playlistIdAtiva || null;
+        // preencho as opcoes priorizando o banco local, caindo pro json, e caindo pro padrao
+        // todo: remover nomeLoja e afins só é usado pelo autoClicker.js
+        // todo: fazer configJson alimentar os inputs
+        nomeLojaInput.value = result.nomeLoja || configJson.nome_loja || 'CAMPINAS';
+        linkPbiInput.value = result.linkPbi || configJson.url_alvo || '';
 
-    renderizarListaPlaylists();
-  });
+        tempoMinutosInput.value = result.tempoMinutos !== undefined ? result.tempoMinutos : 60;
+        tempoSegundosInput.value = result.tempoSegundos !== undefined ? result.tempoSegundos : 0;
 
+        playlistsSalvas = result.playlists || [];
+        estadoRevolver.ativo = result.revolverAtivo || false;
+        estadoRevolver.playlistId = result.playlistIdAtiva || null;
+
+        renderizarListaPlaylists();
+      });
+    });
 
   function renderizarListaPlaylists() {
     listaPlaylistsBody.innerHTML = '';
@@ -128,6 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     else if (e.target.classList.contains('btn-toggle-pl')) {
+      // gerencio o toggle exclusivista, para que apenas uma playlist rode por vez
+      // todo: criar funcao de multi execao e alternancia
       if (estadoRevolver.ativo && estadoRevolver.playlistId === idAlvo) {
         estadoRevolver.ativo = false;
         estadoRevolver.playlistId = null;
@@ -144,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
-
 
   function abrirEdicaoPlaylist(id) {
     playlistEmEdicaoId = id;
@@ -211,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     vincularEventosLinha();
   }
 
-  // amrrando a atualizacao dos inputs soltos com o array da playlist
+  // amarro a atualizacao dos inputs soltos com o array da playlist
   function sincronizarCamposDomParaArray() {
     if (!playlistEmEdicaoId) return;
     const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
@@ -354,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const min = parseInt(tempoMinutosInput.value, 10);
     const seg = parseInt(tempoSegundosInput.value, 10);
 
-    if (!linkPbiInput.value.includes('app.powerbi.com/view?r=')) {
+    if (linkPbiInput.value !== "" && !linkPbiInput.value.includes('app.powerbi.com/view?r=')) {
       mostrarStatus('Link do Power BI inválido.', false);
       return;
     }

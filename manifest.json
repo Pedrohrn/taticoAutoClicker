@@ -32,5 +32,15 @@
       ],
       "run_at": "document_end"
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "config.json"
+      ],
+      "matches": [
+        "*://app.powerbi.com/view?r=*"
+      ]
+    }
   ]
 }
