@@ -12,9 +12,15 @@ mkdir -p "$CONFIG_DIR"
 mkdir -p "$EXTENSIONS_DIR"
 
 if [ ! -d "$EXTENSIONS_DIR/taticoAutoClicker" ]; then
+    cd "$EXTENSIONS_DIR/taticoAutoClicker"
+    # dando permissão pro usuário do ubuntu gerenciar arquivos .git
+    sudo chown -R $(whoami):$(id -gn) .git
     git clone "$REPO_URL" "$EXTENSIONS_DIR/taticoAutoClicker"
 else
-    cd "$EXTENSIONS_DIR/taticoAutoClicker" && git pull
+    cd "$EXTENSIONS_DIR/taticoAutoClicker"
+    # dando permissão pro usuário do ubuntu gerenciar arquivos .git
+    sudo chown -R $(whoami):$(id -gn) .git
+    git pull
 fi
 
 # criando o arquivo de configuracao com os valores padrao se for a primeira execucao
