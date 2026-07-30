@@ -61,6 +61,12 @@
       color: #ffffff;
     }
 
+    .sidebar-tools {
+      margin-top: auto;
+      border-top: 1px solid #e0e0e0;
+      padding-top: 15px;
+    }
+
     /* area principal de conteudo */
     .content {
       flex: 1;
@@ -212,10 +218,15 @@
     </div>
     <button class="nav-btn active" data-target="tab-autoclicker">AutoClicker</button>
     <button class="nav-btn" data-target="tab-revolver">Auto Tab Revolver</button>
+
+    <div class="sidebar-tools">
+      <button id="btnExportar" class="nav-btn" style="width: 100%; font-size: 13px;">Exportar JSON</button>
+      <button id="btnImportar" class="nav-btn" style="width: 100%; font-size: 13px;">Importar JSON</button>
+      <input type="file" id="fileImportar" accept=".json" style="display: none;">
+    </div>
   </div>
 
   <div class="content">
-
     <div id="tab-autoclicker" class="tab-content active">
       <h2>Configurações do AutoClicker</h2>
       <div class="form-group">

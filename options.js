@@ -2,6 +2,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // seletores do menu lateral
   const navBtns = document.querySelectorAll('.nav-btn');
   const tabContents = document.querySelectorAll('.tab-content');
+  const btnExportar = document.getElementById('btnExportar');
+  const btnImportar = document.getElementById('btnImportar');
+  const fileImportar = document.getElementById('fileImportar');
 
   // seletores da aba autoclicker
   const nomeLojaInput = document.getElementById('nomeLoja');
@@ -22,9 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let playlistLocal = [];
 
-  // navegação entre abas laterais
+  // navegacao entre abas laterais
   navBtns.forEach(btn => {
     btn.addEventListener('click', () => {
+      if (btn.id === 'btnExportar' || btn.id === 'btnImportar') return;
+
       navBtns.forEach(b => b.classList.remove('active'));
       tabContents.forEach(c => c.classList.remove('active'));
 
@@ -181,10 +186,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   btnMarcarTodos.addEventListener('click', () => {
-    sincronizarCamposDomParaArray();
-    const todosAtivos = playlistLocal.every(i => i.ativo);
-    playlistLocal.forEach(i => i.ativo = !todosAtivos);
-    renderizarPlaylist();
+    const checkboxes = document.querySelectorAll('.chk-item');
+    const todosMarcados = Array.from(checkboxes).every(chk => chk.checked);
+
+    checkboxes.forEach(chk => {
+      chk.checked = !todosMarcados;
+    });
+
+    chkSelectAll.checked = !todosMarcados;
   });
 
   btnRemoverSelecionados.addEventListener('click', () => {
@@ -228,6 +237,49 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.set({ playlists: playlistLocal }, () => {
       mostrarStatus('Playlist de rotação salva com sucesso!', true);
     });
+  });
+
+  btnExportar.addEventListener('click', () => {
+    sincronizarCamposDomParaArray();
+    chrome.storage.local.get(null, (items) => {
+      const json = JSON.stringify(items, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'tatico_configuracoes.json';
+      document.body.appendChild(a);
+      a.click();
+
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  });
+
+  btnImportar.addEventListener('click', () => {
+    fileImportar.click();
+  });
+
+  fileImportar.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evento) => {
+      try {
+        const dados = JSON.parse(evento.target.result);
+        chrome.storage.local.set(dados, () => {
+          mostrarStatus('Configurações importadas! Recarregando interface...', true);
+          setTimeout(() => location.reload(), 1500);
+        });
+      } catch (erro) {
+        mostrarStatus('Erro ao ler ou processar o JSON.', false);
+      }
+    };
+    reader.readAsText(file);
+
+    e.target.value = '';
   });
 
   function mostrarStatus(mensagem, sucesso) {
