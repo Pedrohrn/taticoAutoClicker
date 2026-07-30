@@ -116,13 +116,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   tabelaPlaylists.addEventListener('click', (e) => {
-    const idAlvo = e.target.dataset.id;
+    // procuro o elemento botao pai mais proximo de forma infalivel
+    const btn = e.target.closest('button');
+    if (!btn) return;
+
+    // preveindo recarregamento indesejado caso a tabela esteja dentro de um form
+    e.preventDefault();
+
+    const idAlvo = btn.dataset.id;
     if (!idAlvo) return;
 
-    if (e.target.classList.contains('btn-editar-pl')) {
+    if (btn.classList.contains('btn-editar-pl')) {
       abrirEdicaoPlaylist(idAlvo);
     }
-    else if (e.target.classList.contains('btn-remover-pl')) {
+    else if (btn.classList.contains('btn-remover-pl')) {
       if (confirm('Tem certeza que deseja excluir esta playlist?')) {
         // caso o usuario remova a playlist que esta em execucao, eu interrompo a execucao por seguranca
         if (estadoRevolver.playlistId === idAlvo) {
@@ -137,9 +144,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
     }
-    else if (e.target.classList.contains('btn-toggle-pl')) {
+    else if (btn.classList.contains('btn-toggle-pl')) {
       // gerencio o toggle exclusivista, para que apenas uma playlist rode por vez
-      // todo: criar funcao de multi execao e alternancia
+      // todo: criar funcao de multi execucao e alternancia
       if (estadoRevolver.ativo && estadoRevolver.playlistId === idAlvo) {
         estadoRevolver.ativo = false;
         estadoRevolver.playlistId = null;
