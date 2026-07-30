@@ -18,6 +18,12 @@ Crie uma pasta em `Documentos` para o repositório e navegue até a mesma.
 sudo mkdir ~/tatico_extensions && cd ~/tatico_extensions
 ```
 
+### 2.1 Dando permissão ao usuário do ubuntu para gerenciar o git
+
+```bash
+sudo chown -R $(whoami):$(id -gn) .git
+```
+
 ---
 
 ### 3. Faça o download do repositório
