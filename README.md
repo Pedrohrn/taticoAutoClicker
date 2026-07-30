@@ -73,9 +73,9 @@ sudo mkdir ~/tatico_extensions && cd ~/tatico_extensions
 
 └── ### 2.1 Dando permissão ao usuário do ubuntu para gerenciar o git
     
-    ```bash
-    sudo chown -R $(whoami):$(id -gn) .git
-    ```
+```bash
+sudo chown -R $(whoami):$(id -gn) .git
+```
 
 ---
 
