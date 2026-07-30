@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Controle - Tatico</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      width: 220px;
+      padding: 15px;
+      margin: 0;
+      background-color: #ffffff;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .header img {
+      max-width: 100px;
+      height: auto;
+    }
+
+    .status-container {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #fff;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .btn-play {
+      background-color: #28a745;
+    }
+
+    .btn-play:hover {
+      background-color: #218838;
+    }
+
+    .btn-pause {
+      background-color: #dc3545;
+    }
+
+    .btn-pause:hover {
+      background-color: #c82333;
+    }
+
+    .btn-options {
+      background-color: #6c757d;
+    }
+
+    .btn-options:hover {
+      background-color: #5a6268;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <img src="logo.png" alt="Tatico">
+  </div>
+  <div class="status-container" id="textoStatus">Status: Verificando...</div>
+  <button id="btnToggle" class="btn btn-play">Iniciar Revolver</button>
+  <button id="btnOpcoes" class="btn btn-options">Configurações</button>
+  <script src="popup.js"></script>
+</body>
+
+</html>
