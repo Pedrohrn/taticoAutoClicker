@@ -19,6 +19,12 @@ sudo apt update && sudo apt install curl && curl -s https://raw.githubuserconten
 curl -s https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh | bash -s -- --tv padaria --loja CAMPINAS
 ```
 
+# Se der erro de acesso negado ou falha de permissão durante a instalação, nos passos git pull ou git clone, execute o comando abaixo pra dar permissão do usuário ubuntu atual lidar com o git:
+
+```bash
+# sudo chown -R "$(whoami)":"$(id -gn)" ~/tatico_extensions/taticoAutoClicker/.git
+```
+
 ## Argumentos disponíveis
 
 ### Definir a TV
