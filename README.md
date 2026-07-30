@@ -1,5 +1,58 @@
 # Tatico Auto Clicker
 
+# Instalação Automática
+
+## Argumentos disponíveis
+
+### Definir a TV
+
+```text
+--tv padaria
+```
+
+ou
+
+```text
+--tv acougue
+```
+
+---
+
+### Definir a loja
+
+```text
+--loja NOME_DA_LOJA_EM_CAIXA_ALTA
+```
+
+---
+
+### Atualizar o link do PowerBI
+
+```text
+--update
+```
+
+---
+
+## Exemplo
+
+```bash
+curl -s https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh | bash -s -- --tv padaria --update https://meu-novo-link-aqui.com
+```
+
+O comando acima irá atualizar o link do powerbi no inicializador automático do chrome.
+
+---
+
+## Exemplo sem atualizar o link do PowerBI
+
+Configurando a TV da padaria em Campinas:
+
+```bash
+curl -s https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh | bash -s -- --tv padaria --loja CAMPINAS
+```
+---
+
 ## Instalação Manual
 
 ### 1. Instale a ferramenta Git na máquina
@@ -18,11 +71,11 @@ Crie uma pasta em `Documentos` para o repositório e navegue até a mesma.
 sudo mkdir ~/tatico_extensions && cd ~/tatico_extensions
 ```
 
-### 2.1 Dando permissão ao usuário do ubuntu para gerenciar o git
-
-```bash
-sudo chown -R $(whoami):$(id -gn) .git
-```
+└── ### 2.1 Dando permissão ao usuário do ubuntu para gerenciar o git
+    
+    ```bash
+    sudo chown -R $(whoami):$(id -gn) .git
+    ```
 
 ---
 
@@ -116,65 +169,3 @@ Navegue até o link do Microsoft PB do Tatico e recarregue a tela.
 </p>
 
 ---
-
-# Instalação Automática
-
-Ou pule todo esse passo a passo e instale automaticamente copiando e colando no terminal da maquina.
-
-```bash
-curl -s https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh | bash
-```
-
----
-
-# Nova versão
-
-## Argumentos disponíveis
-
-### Definir a TV
-
-```text
---tv padaria
-```
-
-ou
-
-```text
---tv acougue
-```
-
----
-
-### Definir a loja
-
-```text
---loja NOME_DA_LOJA_EM_CAIXA_ALTA
-```
-
----
-
-### Atualizar o link do PowerBI
-
-```text
---update
-```
-
----
-
-## Exemplo
-
-```bash
---tv padaria --update https://meu-novo-link-aqui.com
-```
-
-O comando acima irá atualizar o link do powerbi no inicializador automático do chrome.
-
----
-
-## Exemplo sem atualizar a TV
-
-Configurando a TV da padaria em Campinas:
-
-```bash
-curl -s https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh | bash -s -- --tv padaria --loja CAMPINAS
-```
