@@ -4,6 +4,7 @@
 sudo apt update && sudo apt install git -y
 
 EXTENSIONS_DIR="$HOME/tatico_extensions"
+REPO_DIR="taticoAutoClicker"
 REPO_URL="https://github.com/Pedrohrn/taticoAutoClicker.git"
 CONFIG_DIR="$HOME/.config/tatico-chrome"
 CONFIG_FILE="$CONFIG_DIR/urls.conf"
@@ -11,8 +12,19 @@ CONFIG_FILE="$CONFIG_DIR/urls.conf"
 mkdir -p "$CONFIG_DIR"
 mkdir -p "$EXTENSIONS_DIR"
 
-# dando permissão pro usuário do ubuntu gerenciar arquivos .git
-sudo chown -R $(whoami):$(id -gn) "$EXTENSIONS_DIR/taticoAutoClicker" && cd "$EXTENSIONS_DIR/taticoAutoClicker" && (if [ -d .git ]; then git pull; else git clone "$REPO_URL" .; fi)
+cd "$EXTENSIONS_DIR" || exit 1
+
+if [ -d "$REPO_DIR" ]; then
+    echo "Diretório encontrado. Atualizando o repositório..."
+    cd "$REPO_DIR" || exit 1
+    git pull
+else
+    echo "Diretório não encontrado. Clonando o repositório..."
+    git clone "$REPO_URL" "$REPO_DIR"
+    cd "$REPO_DIR" || exit 1
+fi
+
+# sudo chown -R "$(whoami)":"$(id -gn)" .git
 
 # criando o arquivo de configuracao com os valores padrao se for a primeira execucao
 if [ ! -f "$CONFIG_FILE" ]; then
