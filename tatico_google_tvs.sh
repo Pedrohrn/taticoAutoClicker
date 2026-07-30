@@ -125,7 +125,7 @@ After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=$CHROME_BIN --start-fullscreen --disable-session-crashed-bubble --disable-infobars --noerrdialogs --no-first-run --load-extension="$EXTENSIONS_DIR/taticoAutoClicker" "$URL_ALVO"
+ExecStart=sleep 20 && $CHROME_BIN --start-fullscreen --disable-session-crashed-bubble --disable-infobars --noerrdialogs --no-first-run --load-extension="$EXTENSIONS_DIR/taticoAutoClicker" "$URL_ALVO"
 Restart=always
 RestartSec=10
 Environment=DISPLAY=:0
