@@ -2,6 +2,23 @@
 
 # Instalação Automática
 
+# Para conseguir rodar a instalação automática, será necesário baixar/atualizar o curl com o comando abaixo:
+
+```bash
+sudo apt update && sudo apt install curl
+```
+# Pra instalar curl e o kiosk ao mesmo tempo:
+
+```bash
+sudo apt update && sudo apt install curl && curl -s https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh | bash -s -- --tv padaria --loja CAMPINAS
+```
+
+# Pra instalar o kiosk numa máquina que já possua curl instalado, rode apenas o comando:
+
+```bash
+curl -s https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh | bash -s -- --tv padaria --loja CAMPINAS
+```
+
 ## Argumentos disponíveis
 
 ### Definir a TV
