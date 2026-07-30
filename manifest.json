@@ -39,7 +39,7 @@
         "config.json"
       ],
       "matches": [
-        "*://app.powerbi.com/view*"
+        "*://app.powerbi.com/*"
       ]
     }
   ]
