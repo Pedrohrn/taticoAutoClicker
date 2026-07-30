@@ -37,3 +37,17 @@ $ git clone https://github.com/Pedrohrn/taticoAutoClicker.git
 
 # ou pule todo esse passo a passo e instale automaticamente copiando e colando no terminal da maquina
 curl -s https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh | bash
+
+# nova versao:
+# use o argumento --tv padaria ou --tv acougue
+# user o argumento --loja NOME_DA_LOJA_EM_CAIXA_ALTA para definir a loja
+# use o argumento --update para atualizar o link do powerbi
+# exemplo:
+
+--tv padaria --update https://meu-novo-link-aqui.com
+
+o comando acima irá atualizar o link do powerbi no inicializador automático do chrome
+
+# exemplo sem atualizar a tv, configurando a tv da padaria em campinas:
+
+curl -s https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh | bash -s -- --tv padaria --loja CAMPINAS
