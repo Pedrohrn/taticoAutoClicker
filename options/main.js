@@ -1,7 +1,7 @@
-import { initProfiles } from 'options/profiles.js';
-import { initRoutines } from 'options/routines.js';
-import { initRevolver } from 'options/revolver.js';
-import { initStorage } from 'options/storage.js';
+import { initProfiles } from './options/profiles.js';
+import { initRoutines } from './options/routines.js';
+import { initRevolver } from './options/revolver.js';
+import { initStorage } from './options/storage.js';
 
 // garanto o estado inicial do sistema caso seja a primeira instalacao
 function garantirEstadoInicial() {
