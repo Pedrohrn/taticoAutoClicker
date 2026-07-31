@@ -10,7 +10,7 @@
     "tabs"
   ],
   "background": {
-    "service_worker": "js/background/background.js"
+    "service_worker": "background.js"
   },
   "options_page": "options.html",
   "icons": {
