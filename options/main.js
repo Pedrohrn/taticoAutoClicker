@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
   garantirEstadoInicial();
 
   // logica isolada para navegacao de abas no layout global
-  const navBtns = document.querySelectorAll('.sidebar > .nav-btn');
+  const navBtns = document.querySelectorAll('.sidebar .nav-btn');
   const tabContents = document.querySelectorAll('.tab-content');
 
   navBtns.forEach(btn => {
@@ -29,7 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
       navBtns.forEach(b => b.classList.remove('active'));
       tabContents.forEach(c => c.classList.remove('active'));
       btn.classList.add('active');
-      document.getElementById(btn.dataset.target).classList.add('active');
+      const targetId = btn.dataset.target;
+      if (targetId && document.getElementById(targetId)) {
+        document.getElementById(targetId).classList.add('active');
+      }
     });
   });
 

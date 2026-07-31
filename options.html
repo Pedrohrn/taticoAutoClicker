@@ -13,17 +13,17 @@
     <div class="sidebar-logo">
       <img src="logo.png" alt="Tatico">
     </div>
-    <button class="nav-btn active" data-target="tab-rotinas">Rotinas (AutoClicker)</button>
-    <button class="nav-btn" data-target="tab-perfis">Perfis (Contextos)</button>
+    <div class="menu-group">
+      <span class="menu-label"
+        style="display:block; padding: 10px 15px; color:#888; font-size:12px; font-weight:bold; text-transform:uppercase;">AutoClicker</span>
+      <button class="nav-btn active" data-target="tab-rotinas" style="padding-left: 30px;">Rotinas</button>
+      <button class="nav-btn" data-target="tab-perfis" style="padding-left: 30px;">Perfis</button>
+    </div>
     <button class="nav-btn" data-target="tab-revolver">Auto Tab Revolver</button>
 
     <div class="sidebar-tools">
       <button id="btnExportarJson" class="nav-btn" style="width:100%; font-size:12px;">Exportar JSON</button>
       <button id="btnImportarJson" class="nav-btn" style="width:100%; font-size:12px;">Importar JSON</button>
-      <button id="btnExportarXml" class="nav-btn" style="width:100%; font-size:12px;">Exportar XML</button>
-      <button id="btnImportarXml" class="nav-btn" style="width:100%; font-size:12px;">Importar XML</button>
-      <input type="file" id="fileImportarJson" accept=".json" class="hidden">
-      <input type="file" id="fileImportarXml" accept=".xml" class="hidden">
     </div>
   </div>
 
