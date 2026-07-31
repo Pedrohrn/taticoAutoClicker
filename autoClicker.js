@@ -52,8 +52,16 @@ async function executarRotinaAvancada(rotina) {
       }
 
       if (passo.acao === 'click') {
-        const maxClicks = passo.click_qtde || 1;
-        for (let c = 0; c < maxClicks; c++) {
+        // 0 indica loop infinito no passo até que a condição de parada o interrompa
+        const isInfinito = passo.click_qtde === 0;
+        const maxClicks = isInfinito ? 1 : (passo.click_qtde || 1);
+        let c = 0;
+
+        // uso while para contemplar o loop iterativo sem limites quando isInfinito for true
+        while (isInfinito || c < maxClicks) {
+          if (abortar) break;
+
+          // busco a condicao de parada a cada iteracao
           if (passo.parada_seletor && encontrarElemento(passo.parada_tipo || 'css', passo.parada_seletor)) {
             console.log(`Parada de passo atingida. Pulando para proximo passo.`);
             break;
@@ -62,9 +70,12 @@ async function executarRotinaAvancada(rotina) {
           const alvo = encontrarElemento(passo.tipo_seletor, passo.valor_seletor);
           if (alvo) alvo.click();
 
-          if (c < maxClicks - 1) {
+          // aguardo o intervalo se for infinito ou se nao for o ultimo clique da grade finita
+          if (isInfinito || c < maxClicks - 1) {
             await new Promise(res => setTimeout(res, passo.click_intervalo_ms || 1000));
           }
+
+          c++;
         }
       }
       else if (passo.acao === 'wait') {
