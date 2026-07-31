@@ -20,17 +20,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && (changes.revolverAtivo || changes.playlistIdAtiva)) {
+      atualizarInterface();
+    }
+  });
+
   btnToggle.addEventListener('click', () => {
     chrome.runtime.sendMessage({ action: "obterStatusRevolver" }, (response) => {
       const rodando = response && response.rodando;
       const novoEstado = !rodando;
 
       chrome.storage.local.set({ revolverAtivo: novoEstado }, () => {
-        if (novoEstado) {
-          chrome.runtime.sendMessage({ action: "iniciarRevolver" });
-        } else {
-          chrome.runtime.sendMessage({ action: "pararRevolver" });
-        }
         atualizarInterface();
       });
     });
