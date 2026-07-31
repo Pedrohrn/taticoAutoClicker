@@ -54,63 +54,76 @@
 
       <div id="formRotinaContainer" class="hidden">
         <h2>Editando Rotina <button id="btnVoltarRotinas" class="btn btn-sm btn-secondary">Voltar</button></h2>
+
         <div class="form-group">
           <label>Nome da Rotina:</label>
           <input type="text" id="rotinaNome">
         </div>
         <div class="form-group">
-          <label>Perfil de Contexto (Onde e Quando roda):</label>
+          <label>Perfil de Contexto (Obrigatório):</label>
           <select id="rotinaPerfilId"></select>
         </div>
-        <div class="form-group flex-row">
-          <label><input type="radio" name="rotinaTipo" value="simples" checked> Modo Simples</label>
-          <label><input type="radio" name="rotinaTipo" value="avancada"> Modo Avançado</label>
-        </div>
 
-        <fieldset id="fsRotinaSimples" style="padding: 15px; margin-bottom: 15px;">
-          <legend>Configuração Simples (Loop de Clique)</legend>
-          <div class="form-group">
-            <label>Seletor Alvo (CSS Class ou ID):</label>
-            <input type="text" id="rotinaSimplesSeletor" placeholder="Ex: .btn-proximo">
+        <fieldset style="margin-bottom: 15px;">
+          <legend>Configuração Geral da Rotina</legend>
+          <div style="display:flex; gap:15px; align-items:center; margin-bottom:10px;">
+            <label><input type="checkbox" id="rotinaLoop"> Loop Contínuo</label>
+            <label>Qtd Execuções: <input type="number" id="rotinaQtde" value="1" min="1" style="width:60px;"></label>
           </div>
-          <div class="form-group flex-row">
-            <label><input type="checkbox" id="rotinaSimplesContinuo"> Clique Contínuo</label>
-            <input type="number" id="rotinaSimplesIntervalo" placeholder="Intervalo (ms)" style="width:150px;">
+
+          <div style="margin-bottom:10px;">
+            <label><input type="checkbox" id="rotinaUsaParada"> Usar Condição de Parada (se desmarcado, obedece qtd
+              acima)</label>
+            <div id="containerRotinaParada" style="display:none; margin-top:5px; margin-left: 20px;">
+              <select id="rotinaParadaTipo">
+                <option value="css">CSS (Id/Class)</option>
+                <option value="xpath">XPath</option>
+                <option value="text">Texto</option>
+              </select>
+              <input type="text" id="rotinaParadaValor" placeholder="Seletor de parada">
+            </div>
+          </div>
+
+          <div style="margin-bottom:10px;">
+            <label>Auto-recarregar (refresh) em: </label>
+            <input type="number" id="rotinaAutoRefMin" value="0" min="0" placeholder="Min" style="width:50px;"> min
+            <input type="number" id="rotinaAutoRefSeg" value="0" min="0" placeholder="Seg" style="width:50px;"> seg
+          </div>
+
+          <div>
+            <label><input type="checkbox" id="rotinaAcionaRevolver"> Acionar Auto Tab Revolver ao finalizar rotina</label>
+            <div id="containerRotinaRevolver" style="display:none; margin-top:5px; margin-left: 20px;">
+              <select id="rotinaRevolverPlaylist"></select>
+              <label style="margin-left:10px;">Timeout (ms): <input type="number" step="1000" id="rotinaRevolverTimeout"
+                  value="0" style="width:70px;"></label>
+            </div>
           </div>
         </fieldset>
 
-        <fieldset id="fsRotinaAvancada" class="hidden" style="padding: 15px; margin-bottom: 15px;">
-          <legend>Configuração Avançada (Fila de Passos)</legend>
-          <button id="btnAdicionarPasso" class="btn btn-sm btn-success" style="margin-bottom:10px;">+ Adicionar
-            Passo</button>
+        <div class="form-group">
+          <label>Tipo de Rotina:</label>
+          <label><input type="radio" name="rotinaTipo" value="simples" checked> Simples</label>
+          <label><input type="radio" name="rotinaTipo" value="avancada"> Avançada</label>
+        </div>
+
+        <fieldset id="fsRotinaSimples">
+          <legend>Configuração Simples</legend>
+          <label>Seletor Alvo: <input type="text" id="rotinaSimplesSeletor"></label><br>
+          <label>Intervalo (ms): <input type="number" step="1000" id="rotinaSimplesIntervalo"></label><br>
+          <label><input type="checkbox" id="rotinaSimplesContinuo"> Clique Contínuo (Loop)</label>
+        </fieldset>
+
+        <fieldset id="fsRotinaAvancada" class="hidden">
+          <legend>Passos Avançados</legend>
+          <button id="btnAdicionarPasso" class="btn btn-sm btn-success" style="margin-bottom:10px;">Adicionar Passo</button>
           <table class="data-table">
-            <thead>
-              <tr>
-                <th style="width:30px;">#</th>
-                <th>Ação</th>
-                <th>Tipo Seletor</th>
-                <th>Valor Seletor</th>
-                <th>Atraso (ms)</th>
-                <th style="width:50px;">Remover</th>
-              </tr>
+            <thead id="headPassosAvancados">
             </thead>
             <tbody id="listaPassosBody"></tbody>
           </table>
         </fieldset>
 
-        <fieldset style="padding: 15px; margin-bottom: 15px;">
-          <legend>Condição de Parada (Abortar rotina)</legend>
-          <div class="flex-row">
-            <select id="rotinaParadaTipo" style="width:200px;">
-              <option value="loop_infinito">Loop Infinito (Padrão)</option>
-              <option value="elemento_presente">Parar se elemento surgir</option>
-              <option value="elemento_ausente">Parar se elemento sumir</option>
-            </select>
-            <input type="text" id="rotinaParadaValor" placeholder="Seletor alvo da parada">
-          </div>
-        </fieldset>
-
-        <button id="btnSalvarRotina" class="btn btn-primary">Salvar Rotina</button>
+        <button id="btnSalvarRotina" class="btn btn-primary" style="margin-top: 15px;">Salvar Rotina</button>
       </div>
     </div>
 
