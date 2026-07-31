@@ -1,4 +1,4 @@
-import { initProfiles } from './options/profile.js';
+import { initProfiles } from './profile.js';
 import { initRoutines } from './options/routines.js';
 import { initRevolver } from './options/revolver.js';
 import { initStorage } from './options/storage.js';
