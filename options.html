@@ -13,13 +13,78 @@
     <div class="sidebar-logo">
       <img src="logo.png" alt="Tatico">
     </div>
-    <div class="menu-group">
-      <span class="menu-label"
-        style="display:block; padding: 10px 15px; color:#888; font-size:12px; font-weight:bold; text-transform:uppercase;">AutoClicker</span>
-      <button class="nav-btn active" data-target="tab-rotinas" style="padding-left: 30px;">Rotinas</button>
-      <button class="nav-btn" data-target="tab-perfis" style="padding-left: 30px;">Perfis</button>
+
+    <style>
+      .nav-group {
+        margin-bottom: 5px;
+      }
+
+      .nav-group-title {
+        display: block;
+        width: 100%;
+        padding: 12px 15px;
+        background: transparent;
+        border: none;
+        color: #e0e0e0;
+        text-align: left;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.2s;
+        border-left: 4px solid transparent;
+      }
+
+      .nav-group-title:hover {
+        background: #34495e;
+      }
+
+      .nav-group-title.active {
+        background: #2c3e50;
+        border-left-color: #3498db;
+      }
+
+      .nav-submenus {
+        display: none;
+        flex-direction: column;
+        background: #1a252f;
+      }
+
+      .nav-group.open .nav-submenus {
+        display: flex;
+      }
+
+      .nav-btn.sub-btn {
+        padding: 10px 15px 10px 30px;
+        text-align: left;
+        background: transparent;
+        border: none;
+        color: #bdc3c7;
+        font-size: 13px;
+        cursor: pointer;
+        transition: 0.2s;
+        width: 100%;
+      }
+
+      .nav-btn.sub-btn:hover {
+        color: #fff;
+        background: #2c3e50;
+      }
+
+      .nav-btn.sub-btn.active {
+        color: #fff;
+        font-weight: bold;
+      }
+    </style>
+
+    <div class="nav-group open" id="group-autoclicker">
+      <button class="nav-group-title active">AutoClicker</button>
+      <div class="nav-submenus">
+        <button class="nav-btn sub-btn active" data-target="tab-rotinas">Rotinas</button>
+        <button class="nav-btn sub-btn" data-target="tab-perfis">Perfis</button>
+      </div>
     </div>
-    <button class="nav-btn" data-target="tab-revolver">Auto Tab Revolver</button>
+
+    <button class="nav-btn nav-group-title" data-target="tab-revolver">Auto Tab Revolver</button>
 
     <div class="sidebar-tools">
       <button id="btnExportarJson" class="nav-btn" style="width:100%; font-size:12px;">Exportar JSON</button>
