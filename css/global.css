@@ -1,0 +1,68 @@
+:root {
+  --tatico-red: #d11c1c;
+  --tatico-red-hover: #a31515;
+  --tatico-gray-bg: #f4f4f9;
+  --tatico-gray-border: #e0e0e0;
+  --tatico-text: #333333;
+  --tatico-text-light: #555555;
+  --success: #28a745;
+  --danger: #dc3545;
+  --info: #007bff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--tatico-gray-bg);
+  display: flex;
+  height: 100vh;
+  color: var(--tatico-text);
+}
+
+.sidebar {
+  width: 240px;
+  background-color: #ffffff;
+  border-right: 1px solid var(--tatico-gray-border);
+  padding: 20px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logo {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.sidebar-logo img {
+  max-width: 140px;
+  height: auto;
+}
+
+.content {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.tab-content {
+  display: none;
+  max-width: 900px;
+  background: #ffffff;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.hidden {
+  display: none !important;
+}

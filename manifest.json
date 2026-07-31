@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Tatico AutoClicker & Revolver",
-  "version": "2.0",
-  "description": "AutoClicker injetavel e Auto Tab Revolver para TVs Tatico",
+  "version": "3.0",
+  "description": "AutoClicker modular e Auto Tab Revolver para TVs Tatico",
   "permissions": [
     "activeTab",
     "scripting",
@@ -10,7 +10,7 @@
     "tabs"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "js/background/background.js"
   },
   "options_page": "options.html",
   "icons": {
@@ -19,16 +19,15 @@
     "128": "logo.png"
   },
   "action": {
-    "default_icon": "logo.png",
-    "default_popup": "popup.html"
+    "default_icon": "logo.png"
   },
   "content_scripts": [
     {
       "matches": [
-        "*://app.powerbi.com/view*"
+        "*://*/*"
       ],
       "js": [
-        "autoClicker.js"
+        "js/content/autoClicker.js"
       ],
       "run_at": "document_end"
     }

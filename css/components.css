@@ -1,0 +1,137 @@
+h2 {
+  font-size: 20px;
+  border-bottom: 2px solid var(--tatico-gray-border);
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 600;
+  color: var(--tatico-text-light);
+  font-size: 14px;
+}
+
+input[type="text"],
+input[type="url"],
+input[type="number"],
+input[type="time"],
+select,
+textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--tatico-red);
+  outline: none;
+}
+
+.btn {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+  color: #fff;
+  transition: background 0.2s;
+}
+
+.btn-primary {
+  background-color: var(--tatico-red);
+}
+
+.btn-primary:hover {
+  background-color: var(--tatico-red-hover);
+}
+
+.btn-secondary {
+  background-color: var(--info);
+}
+
+.btn-success {
+  background-color: var(--success);
+}
+
+.btn-danger {
+  background-color: var(--danger);
+}
+
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  padding: 12px 15px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tatico-text-light);
+  cursor: pointer;
+  border-radius: 6px;
+  margin-bottom: 5px;
+}
+
+.nav-btn:hover {
+  background-color: #f0f0f0;
+}
+
+.nav-btn.active {
+  background-color: var(--tatico-red);
+  color: #ffffff;
+}
+
+.sidebar-tools {
+  margin-top: auto;
+  border-top: 1px solid var(--tatico-gray-border);
+  padding-top: 15px;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+.data-table th,
+.data-table td {
+  border: 1px solid var(--tatico-gray-border);
+  padding: 10px;
+  text-align: left;
+  font-size: 13px;
+}
+
+.data-table th {
+  background-color: #f8f9fa;
+}
+
+.drag-handle {
+  cursor: move;
+  text-align: center;
+  font-weight: bold;
+  color: #888;
+}
+
+.flex-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}

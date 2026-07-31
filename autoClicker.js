@@ -1,116 +1,130 @@
-// tento buscar o arquivo config.json injetado pelo bash na raiz da extensao
-fetch(chrome.runtime.getURL('config.json'))
-  .then(response => response.json())
-  .catch(() => ({})) // se o arquivo nao existir, instancio um objeto vazio para nao quebrar a execucao
-  .then(configJson => {
+// inicializo o motor avaliador assim que a pagina e totalmente montada pelo dom
+window.addEventListener('load', () => {
+  chrome.storage.local.get(['perfis', 'rotinas'], (data) => {
+    const perfis = data.perfis || [];
+    const rotinas = data.rotinas || [];
 
-    chrome.storage.local.get(['nomeLoja', 'linkPbi', 'tempoMinutos', 'tempoSegundos'], (configs) => {
+    const urlAtual = location.href;
+    const hojeDate = new Date();
+    const diaAtual = hojeDate.getDay(); // 0(dom) a 6(sab)
+    const hh = hojeDate.getHours().toString().padStart(2, '0');
+    const mm = hojeDate.getMinutes().toString().padStart(2, '0');
+    const horaAtualStr = `${hh}:${mm}`;
 
-      // priorizo o valor do banco local, caindo para o json, e por fim o valor padrao
-      // todo: fazer o config.json alimentar os inputs
-      const nomeLoja = configs.nomeLoja || configJson.nome_loja || "CAMPINAS";
-      const linkPbi = configs.linkPbi || configJson.url_alvo || "";
+    // encontro qual perfil o contexto atual (pagina e relogio) se encaixa
+    const perfilAtivo = perfis.find(p => {
+      const matchDia = p.dias_semana.includes(diaAtual);
+      const matchUrl = p.urls_alvo.some(url => urlAtual.includes(url));
 
-      const min = configs.tempoMinutos !== undefined ? configs.tempoMinutos : 60;
-      const seg = configs.tempoSegundos !== undefined ? configs.tempoSegundos : 0;
-
-      let tempoAutoRefresh = (min * 60000) + (seg * 1000);
-      if (tempoAutoRefresh < 10000) tempoAutoRefresh = 3600000;
-
-      const horarioDeReload = Date.now() + tempoAutoRefresh;
-      let menuAberto = false;
-
-      console.log(`Autoclicker PBI iniciado. Loja: ${nomeLoja}`);
-
-      function esperarElemento(seletor, timeout = 30000) {
-        return new Promise((resolve, reject) => {
-          const inicio = Date.now();
-          const intervalo = setInterval(() => {
-            const elemento = document.querySelector(seletor);
-            if (elemento) {
-              clearInterval(intervalo);
-              resolve(elemento);
-              return;
-            }
-            if (Date.now() - inicio > timeout) {
-              clearInterval(intervalo);
-              reject("Timeout procurando: " + seletor);
-            }
-          }, 500);
-        });
+      let matchHora = true;
+      if (p.horario && p.horario.inicio && p.horario.fim) {
+        matchHora = (horaAtualStr >= p.horario.inicio && horaAtualStr <= p.horario.fim);
       }
 
-      async function abrirMenu() {
-        try {
-          console.log("Procurando botão do menu...");
-          const botaoMenu = await esperarElemento(".thumbnail-image");
-          botaoMenu.click();
-          menuAberto = true;
-          setTimeout(() => {
-            nextPanel();
-          }, 2000);
-        }
-        catch (erro) {
-          console.log(erro);
-        }
-      }
+      return matchDia && matchUrl && matchHora;
+    });
 
-      async function nextPanel() {
-        try {
-          const labelAcompanhamento = "ACOMPANHAMENTO VENDA"
-          if (document.body.innerText.includes(labelAcompanhamento)) {
-            if (!document.body.innerText.includes(nomeLoja)) {
-              const seta = await esperarElemento(".pbi-glyph-chevronrightmedium");
-              console.log("Avançando painel procurando por: " + nomeLoja);
-              seta.click();
+    if (!perfilAtivo) {
+      console.log('Tatico AutoClicker: Contexto atual nao atende a nenhum perfil de automacao.');
+      return;
+    }
 
-              setTimeout(nextPanel, 2000);
-              return;
-            }
-          } else {
-            setTimeout(nextPanel, 2000);
-          }
-        }
-        catch (erro) {
-          console.log(erro);
-        }
-      }
+    console.log(`Tatico AutoClicker: Contexto ativado pelo perfil [${perfilAtivo.nome}]`);
 
-      function gerenciarContador() {
-        const tempoRestanteMs = horarioDeReload - Date.now();
+    // busco as rotinas amarradas ao perfil ativo
+    const rotinasAtivas = rotinas.filter(r => r.perfil_id === perfilAtivo.id && r.ativa);
 
-        if (tempoRestanteMs <= 0) {
-          console.log("Tempo esgotado. Atualizando página...");
-          chrome.runtime.sendMessage({ action: "updateBadge", text: "00:00" });
-          location.reload();
-          return;
-        }
-
-        const minutos = Math.floor(tempoRestanteMs / 60000);
-        const segundos = Math.floor((tempoRestanteMs % 60000) / 1000);
-
-        const tempoFormatado = `${minutos}:${segundos.toString().padStart(2, '0')}`;
-
-        chrome.runtime.sendMessage({
-          action: "updateBadge",
-          text: tempoFormatado
-        });
-      }
-
-      function iniciar() {
-        console.log("Página carregada, acionando rotinas.");
-        abrirMenu();
-
-        gerenciarContador();
-        setInterval(gerenciarContador, 5000);
-      }
-
-      if (linkPbi && location.href.includes(linkPbi)) {
-        if (document.readyState === "complete" || document.readyState === "interactive") {
-          iniciar();
-        } else {
-          window.addEventListener("load", iniciar);
-        }
+    rotinasAtivas.forEach(r => {
+      if (r.tipo === 'simples') {
+        executarRotinaSimples(r);
+      } else {
+        executarRotinaAvancada(r);
       }
     });
   });
+});
+
+// localizador universal que lida com prioridades de busca no DOM
+function encontrarElemento(tipo, seletor) {
+  try {
+    if (tipo === 'xpath') {
+      return document.evaluate(seletor, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    }
+    if (tipo === 'css') {
+      return document.querySelector(seletor);
+    }
+    if (tipo === 'text') {
+      // fallback frágil: procura a exata string dentro do body
+      const elementos = Array.from(document.querySelectorAll('*'));
+      return elementos.find(el => el.innerText && el.innerText.trim() === seletor && el.children.length === 0);
+    }
+  } catch (err) {
+    console.error(`Erro ao localizar ${tipo}: ${seletor}`, err);
+  }
+  return null;
+}
+
+// monitora e orquestra condicoes de parada da rotina injetada
+function verificarParada(condicao) {
+  if (condicao.tipo === 'loop_infinito') return false;
+
+  const el = document.querySelector(condicao.valor_seletor);
+  if (condicao.tipo === 'elemento_presente' && el) return true;
+  if (condicao.tipo === 'elemento_ausente' && !el) return true;
+
+  return false;
+}
+
+function executarRotinaSimples(rotina) {
+  const cfg = rotina.config_simples;
+  console.log(`Iniciando Rotina Simples: ${rotina.nome}`);
+
+  const intervalo = setInterval(() => {
+    if (verificarParada(rotina.condicao_parada)) {
+      console.log(`Rotina Simples abortada via Condicao de Parada: ${rotina.nome}`);
+      clearInterval(intervalo);
+      return;
+    }
+
+    const elemento = document.querySelector(cfg.seletor_alvo);
+    if (elemento) {
+      elemento.click();
+      if (!cfg.clique_continuo) clearInterval(intervalo);
+    }
+  }, cfg.intermitencia_ms);
+}
+
+// executo a fila de funcoes promises usando async await isoladamente do thread principal
+async function executarRotinaAvancada(rotina) {
+  console.log(`Iniciando Fila Avancada: ${rotina.nome}`);
+
+  let abortar = false;
+
+  while (!abortar) {
+    if (verificarParada(rotina.condicao_parada)) {
+      console.log(`Fila abortada via Condicao de Parada: ${rotina.nome}`);
+      break;
+    }
+
+    for (let passo of rotina.passos_avancados) {
+      if (passo.delay_ms > 0) {
+        await new Promise(res => setTimeout(res, passo.delay_ms));
+      }
+
+      if (passo.acao === 'click') {
+        const alvo = encontrarElemento(passo.tipo_seletor, passo.valor_seletor);
+        if (alvo) alvo.click();
+      }
+
+      // se for apenas tipo 'wait', o loop for avança iterando o proximo apenas apos aguardar o delay da promise acima
+    }
+
+    // condicoes para refazer o loop
+    if (rotina.condicao_parada.tipo === 'loop_infinito') {
+      // pequeno folego padrao para evitar congelamento da tab no loop
+      await new Promise(res => setTimeout(res, 500));
+    } else {
+      abortar = true; // se nao tem config pra fazer loop, eu zero a engine aqui.
+    }
+  }
+}

@@ -3,277 +3,171 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Configurações - Tatico AutoClicker</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f4f4f9;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      height: 100vh;
-    }
-
-    /* menu lateral estilo sidebar */
-    .sidebar {
-      width: 220px;
-      background-color: #ffffff;
-      border-right: 1px solid #e0e0e0;
-      padding: 20px 10px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .sidebar-logo {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-
-    .sidebar-logo img {
-      max-width: 130px;
-      height: auto;
-    }
-
-    .nav-btn {
-      background: none;
-      border: none;
-      padding: 12px 15px;
-      text-align: left;
-      font-size: 14px;
-      font-weight: 600;
-      color: #555;
-      cursor: pointer;
-      border-radius: 6px;
-      margin-bottom: 5px;
-      transition: background 0.2s, color 0.2s;
-    }
-
-    .nav-btn:hover {
-      background-color: #f0f0f0;
-    }
-
-    .nav-btn.active {
-      background-color: #d11c1c;
-      color: #ffffff;
-    }
-
-    .sidebar-tools {
-      margin-top: auto;
-      border-top: 1px solid #e0e0e0;
-      padding-top: 15px;
-    }
-
-    /* area principal de conteudo */
-    .content {
-      flex: 1;
-      padding: 30px;
-      overflow-y: auto;
-    }
-
-    .tab-content {
-      display: none;
-      max-width: 750px;
-      background: #ffffff;
-      padding: 25px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    h2 {
-      margin-top: 0;
-      color: #333;
-      font-size: 20px;
-      border-bottom: 2px solid #f0f0f0;
-      padding-bottom: 10px;
-    }
-
-    .form-group {
-      margin-bottom: 15px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: 600;
-      color: #555;
-      font-size: 14px;
-    }
-
-    input,
-    select {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-
-    input:focus,
-    select:focus {
-      border-color: #d11c1c;
-      outline: none;
-    }
-
-    .time-inputs {
-      display: flex;
-      gap: 10px;
-    }
-
-    .btn-submit {
-      padding: 12px 20px;
-      background-color: #d11c1c;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 14px;
-    }
-
-    .btn-submit:hover {
-      background-color: #a31515;
-    }
-
-    .btn-secondary {
-      padding: 10px 15px;
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
-      margin-bottom: 15px;
-    }
-
-    .btn-sm {
-      padding: 5px 10px;
-      font-size: 12px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      color: white;
-    }
-
-    .btn-danger-sm {
-      padding: 5px 10px;
-      background-color: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 12px;
-    }
-
-    /* tabelas padronizadas */
-    .data-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-
-    .data-table th,
-    .data-table td {
-      border: 1px solid #e0e0e0;
-      padding: 10px;
-      text-align: left;
-      font-size: 13px;
-    }
-
-    .data-table th {
-      background-color: #f8f9fa;
-    }
-
-    .drag-handle {
-      cursor: move;
-      text-align: center;
-      font-weight: bold;
-      color: #888;
-    }
-
-    /* acoes em massa */
-    .bulk-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    #status {
-      margin-top: 15px;
-      font-weight: bold;
-      min-height: 20px;
-    }
-
-    .error {
-      border-color: #dc3545 !important;
-    }
-  </style>
+  <title>Painel de Controle - Tatico</title>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/components.css">
 </head>
 
 <body>
-
   <div class="sidebar">
     <div class="sidebar-logo">
       <img src="logo.png" alt="Tatico">
     </div>
-    <button class="nav-btn active" data-target="tab-autoclicker">AutoClicker</button>
+    <button class="nav-btn active" data-target="tab-rotinas">Rotinas (AutoClicker)</button>
+    <button class="nav-btn" data-target="tab-perfis">Perfis (Contextos)</button>
     <button class="nav-btn" data-target="tab-revolver">Auto Tab Revolver</button>
 
     <div class="sidebar-tools">
-      <button id="btnExportar" class="nav-btn" style="width: 100%; font-size: 13px;">Exportar JSON</button>
-      <button id="btnImportar" class="nav-btn" style="width: 100%; font-size: 13px;">Importar JSON</button>
-      <input type="file" id="fileImportar" accept=".json" style="display: none;">
+      <button id="btnExportarJson" class="nav-btn" style="width:100%; font-size:12px;">Exportar JSON</button>
+      <button id="btnImportarJson" class="nav-btn" style="width:100%; font-size:12px;">Importar JSON</button>
+      <button id="btnExportarXml" class="nav-btn" style="width:100%; font-size:12px;">Exportar XML</button>
+      <button id="btnImportarXml" class="nav-btn" style="width:100%; font-size:12px;">Importar XML</button>
+      <input type="file" id="fileImportarJson" accept=".json" class="hidden">
+      <input type="file" id="fileImportarXml" accept=".xml" class="hidden">
     </div>
   </div>
 
   <div class="content">
-    <div id="tab-autoclicker" class="tab-content active">
-      <h2>Configurações do AutoClicker</h2>
-      <div class="form-group">
-        <label for="nomeLoja">Loja:</label>
-        <select id="nomeLoja">
-          <option value="CAMPINAS" selected>CAMPINAS</option>
-          <option value="GARAVELO">GARAVELO</option>
-          <option value="PORTAL">PORTAL</option>
-          <option value="PAPILLON">PAPILLON</option>
-          <option value="T7">T7</option>
-          <option value="CENTRO">CENTRO</option>
-        </select>
-      </div>
 
-      <div class="form-group">
-        <label for="linkPbi">Link do Power BI:</label>
-        <input type="url" id="linkPbi" placeholder="https://app.powerbi.com/view?r=...">
-      </div>
-
-      <div class="form-group">
-        <label>Temporizador (Refresh):</label>
-        <div class="time-inputs">
-          <input type="number" id="tempoMinutos" placeholder="Minutos" min="0" max="1440">
-          <input type="number" id="tempoSegundos" placeholder="Segundos" min="0" max="59">
+    <div id="tab-rotinas" class="tab-content active">
+      <div id="listaRotinasContainer">
+        <h2>Gerenciador de Rotinas <button id="btnNovaRotina" class="btn btn-success">+ Criar Rotina</button></h2>
+        <div class="flex-row">
+          <button id="btnPausarRotinas" class="btn btn-sm btn-secondary">Pausar Selecionados</button>
+          <button id="btnExcluirRotinas" class="btn btn-sm btn-danger">Excluir Selecionados</button>
         </div>
+        <table class="data-table" id="tabelaRotinas">
+          <thead>
+            <tr>
+              <th style="width:30px;"><input type="checkbox" id="chkRotinasAll"></th>
+              <th style="width:30px;">#</th>
+              <th>Nome</th>
+              <th>Perfil Vinculado</th>
+              <th>Tipo</th>
+              <th>Status</th>
+              <th style="width:220px; text-align:center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="listaRotinasBody"></tbody>
+        </table>
       </div>
 
-      <button id="salvarAutoClicker" class="btn-submit">Salvar AutoClicker</button>
+      <div id="formRotinaContainer" class="hidden">
+        <h2>Editando Rotina <button id="btnVoltarRotinas" class="btn btn-sm btn-secondary">Voltar</button></h2>
+        <div class="form-group">
+          <label>Nome da Rotina:</label>
+          <input type="text" id="rotinaNome">
+        </div>
+        <div class="form-group">
+          <label>Perfil de Contexto (Onde e Quando roda):</label>
+          <select id="rotinaPerfilId"></select>
+        </div>
+        <div class="form-group flex-row">
+          <label><input type="radio" name="rotinaTipo" value="simples" checked> Modo Simples</label>
+          <label><input type="radio" name="rotinaTipo" value="avancada"> Modo Avançado</label>
+        </div>
+
+        <fieldset id="fsRotinaSimples" style="padding: 15px; margin-bottom: 15px;">
+          <legend>Configuração Simples (Loop de Clique)</legend>
+          <div class="form-group">
+            <label>Seletor Alvo (CSS Class ou ID):</label>
+            <input type="text" id="rotinaSimplesSeletor" placeholder="Ex: .btn-proximo">
+          </div>
+          <div class="form-group flex-row">
+            <label><input type="checkbox" id="rotinaSimplesContinuo"> Clique Contínuo</label>
+            <input type="number" id="rotinaSimplesIntervalo" placeholder="Intervalo (ms)" style="width:150px;">
+          </div>
+        </fieldset>
+
+        <fieldset id="fsRotinaAvancada" class="hidden" style="padding: 15px; margin-bottom: 15px;">
+          <legend>Configuração Avançada (Fila de Passos)</legend>
+          <button id="btnAdicionarPasso" class="btn btn-sm btn-success" style="margin-bottom:10px;">+ Adicionar
+            Passo</button>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width:30px;">#</th>
+                <th>Ação</th>
+                <th>Tipo Seletor</th>
+                <th>Valor Seletor</th>
+                <th>Atraso (ms)</th>
+                <th style="width:50px;">Remover</th>
+              </tr>
+            </thead>
+            <tbody id="listaPassosBody"></tbody>
+          </table>
+        </fieldset>
+
+        <fieldset style="padding: 15px; margin-bottom: 15px;">
+          <legend>Condição de Parada (Abortar rotina)</legend>
+          <div class="flex-row">
+            <select id="rotinaParadaTipo" style="width:200px;">
+              <option value="loop_infinito">Loop Infinito (Padrão)</option>
+              <option value="elemento_presente">Parar se elemento surgir</option>
+              <option value="elemento_ausente">Parar se elemento sumir</option>
+            </select>
+            <input type="text" id="rotinaParadaValor" placeholder="Seletor alvo da parada">
+          </div>
+        </fieldset>
+
+        <button id="btnSalvarRotina" class="btn btn-primary">Salvar Rotina</button>
+      </div>
+    </div>
+
+    <div id="tab-perfis" class="tab-content">
+      <div id="listaPerfisContainer">
+        <h2>Gerenciador de Perfis <button id="btnNovoPerfil" class="btn btn-success">+ Criar Perfil</button></h2>
+        <button id="btnMesclarPerfis" class="btn btn-sm btn-secondary" style="margin-bottom:10px;">Mesclar
+          Selecionados</button>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:30px;">#</th>
+              <th>Nome</th>
+              <th>Dias</th>
+              <th>Horário</th>
+              <th style="width:120px; text-align:center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="listaPerfisBody"></tbody>
+        </table>
+      </div>
+
+      <div id="formPerfilContainer" class="hidden">
+        <h2>Editando Perfil <button id="btnVoltarPerfis" class="btn btn-sm btn-secondary">Voltar</button></h2>
+        <div class="form-group">
+          <label>Nome do Perfil:</label>
+          <input type="text" id="perfilNome">
+        </div>
+        <div class="form-group">
+          <label>Dias da Semana Ativos:</label>
+          <div class="flex-row" id="perfilDiasContainer">
+            <label><input type="checkbox" value="0"> Dom</label>
+            <label><input type="checkbox" value="1"> Seg</label>
+            <label><input type="checkbox" value="2"> Ter</label>
+            <label><input type="checkbox" value="3"> Qua</label>
+            <label><input type="checkbox" value="4"> Qui</label>
+            <label><input type="checkbox" value="5"> Sex</label>
+            <label><input type="checkbox" value="6"> Sáb</label>
+          </div>
+        </div>
+        <div class="form-group flex-row">
+          <div><label>Hora Início:</label><input type="time" id="perfilHoraInicio"></div>
+          <div><label>Hora Fim:</label><input type="time" id="perfilHoraFim"></div>
+        </div>
+        <div class="form-group">
+          <label>URLs Alvo (Uma por linha):</label>
+          <textarea id="perfilUrls" rows="5" placeholder="https://app.powerbi.com/view..."></textarea>
+        </div>
+        <button id="btnSalvarPerfil" class="btn btn-primary">Salvar Perfil</button>
+      </div>
     </div>
 
     <div id="tab-revolver" class="tab-content">
-
       <div id="listaPlaylistsContainer">
-        <h2>Gerenciador de Playlists</h2>
-        <button id="btnNovaPlaylist" class="btn-secondary" style="background-color: #28a745;">+ Criar Nova
-          Playlist</button>
-
-        <table class="data-table" id="tabelaPlaylists">
+        <h2>Gerenciador de Playlists (Revolver) <button id="btnNovaPlaylist" class="btn btn-success">+ Criar
+            Playlist</button></h2>
+        <table class="data-table">
           <thead>
             <tr>
               <th>Nome da Playlist</th>
@@ -281,36 +175,17 @@
               <th style="width: 200px; text-align: center;">Ações</th>
             </tr>
           </thead>
-          <tbody id="listaPlaylistsBody">
-          </tbody>
+          <tbody id="listaPlaylistsBody"></tbody>
         </table>
       </div>
-
-      <div id="detalhesPlaylistContainer" style="display: none;">
-        <h2 style="display: flex; justify-content: space-between; align-items: center;">
-          Editando Playlist
-          <button id="btnVoltarPlaylists" class="btn-sm" style="background-color: #6c757d;">Voltar</button>
-        </h2>
-
-        <div class="form-group">
-          <label for="inputNomePlaylist">Nome da Playlist:</label>
-          <input type="text" id="inputNomePlaylist" placeholder="Ex: Dashboards Padaria">
-        </div>
-
-        <h3 style="font-size: 16px; margin-top: 20px; color: #555;">Itens da Playlist</h3>
-
-        <button id="btnCapturarJanela" class="btn-secondary">Salvar guias da janela atual</button>
-
-        <div class="bulk-actions">
-          <button id="btnMarcarTodos" class="btn-secondary"
-            style="background-color: #6c757d; margin-bottom: 0;">Ativar/Desativar Todos</button>
-          <button id="btnRemoverSelecionados" class="btn-danger-sm">Remover Selecionados</button>
-        </div>
-
+      <div id="detalhesPlaylistContainer" class="hidden">
+        <h2>Editando Playlist <button id="btnVoltarPlaylists" class="btn btn-sm btn-secondary">Voltar</button></h2>
+        <div class="form-group"><label>Nome da Playlist:</label><input type="text" id="inputNomePlaylist"></div>
+        <button id="btnCapturarJanela" class="btn btn-sm btn-secondary">Salvar guias atuais</button>
+        <button id="btnAdicionarItemRevolver" class="btn btn-sm btn-success">Adicionar URL</button>
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width: 30px;"><input type="checkbox" id="chkSelectAll"></th>
               <th style="width: 30px;">#</th>
               <th>URL</th>
               <th style="width: 120px;">Tempo (M:S)</th>
@@ -319,23 +194,14 @@
               <th style="width: 60px;">Ação</th>
             </tr>
           </thead>
-          <tbody id="playlistItensBody">
-          </tbody>
+          <tbody id="playlistItensBody"></tbody>
         </table>
-
-        <br>
-        <button id="btnAdicionarItem" class="btn-secondary" style="background-color: #28a745;">+ Adicionar Nova
-          URL</button>
-        <br><br>
-        <button id="salvarRevolver" class="btn-submit">Salvar Alterações da Playlist</button>
+        <button id="btnSalvarRevolver" class="btn btn-primary">Salvar Playlist</button>
       </div>
-
     </div>
 
-    <div id="status"></div>
   </div>
-
-  <script src="options.js"></script>
+  <script type="module" src="js/options/main.js"></script>
 </body>
 
 </html>
