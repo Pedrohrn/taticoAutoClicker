@@ -141,3 +141,7 @@ systemctl --user enable tatico-chrome.service
 systemctl --user restart tatico-chrome.service
 
 echo "Serviço configurado e reiniciado via systemd para tv $TIPO_TV (loja: ${NOME_LOJA:-CAMPINAS})"
+
+sleep 5
+
+exit
