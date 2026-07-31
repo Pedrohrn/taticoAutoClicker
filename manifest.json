@@ -27,7 +27,7 @@
         "*://*/*"
       ],
       "js": [
-        "js/content/autoClicker.js"
+        "autoClicker.js"
       ],
       "run_at": "document_end"
     }
