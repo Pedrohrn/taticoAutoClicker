@@ -14,81 +14,23 @@
       <img src="logo.png" alt="Tatico">
     </div>
 
-    <style>
-      .nav-group {
-        margin-bottom: 5px;
-      }
-
-      .nav-group-title {
-        display: block;
-        width: 100%;
-        padding: 12px 15px;
-        background: transparent;
-        border: none;
-        color: #e0e0e0;
-        text-align: left;
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.2s;
-        border-left: 4px solid transparent;
-      }
-
-      .nav-group-title:hover {
-        background: #34495e;
-      }
-
-      .nav-group-title.active {
-        background: #2c3e50;
-        border-left-color: #3498db;
-      }
-
-      .nav-submenus {
-        display: none;
-        flex-direction: column;
-        background: #1a252f;
-      }
-
-      .nav-group.open .nav-submenus {
-        display: flex;
-      }
-
-      .nav-btn.sub-btn {
-        padding: 10px 15px 10px 30px;
-        text-align: left;
-        background: transparent;
-        border: none;
-        color: #bdc3c7;
-        font-size: 13px;
-        cursor: pointer;
-        transition: 0.2s;
-        width: 100%;
-      }
-
-      .nav-btn.sub-btn:hover {
-        color: #fff;
-        background: #2c3e50;
-      }
-
-      .nav-btn.sub-btn.active {
-        color: #fff;
-        font-weight: bold;
-      }
-    </style>
-
     <div class="nav-group open" id="group-autoclicker">
-      <button class="nav-group-title active">AutoClicker</button>
+      <button class="nav-group-title active-parent">AutoClicker</button>
       <div class="nav-submenus">
         <button class="nav-btn sub-btn active" data-target="tab-rotinas">Rotinas</button>
         <button class="nav-btn sub-btn" data-target="tab-perfis">Perfis</button>
       </div>
     </div>
 
-    <button class="nav-btn nav-group-title" data-target="tab-revolver">Auto Tab Revolver</button>
+    <button class="nav-group-title" data-target="tab-revolver">Auto Tab Revolver</button>
 
     <div class="sidebar-tools">
-      <button id="btnExportarJson" class="nav-btn" style="width:100%; font-size:12px;">Exportar JSON</button>
-      <button id="btnImportarJson" class="nav-btn" style="width:100%; font-size:12px;">Importar JSON</button>
+      <button id="btnExportarJson" class="tool-btn">Exportar JSON</button>
+      <button id="btnImportarJson" class="tool-btn">Importar JSON</button>
+      <button id="btnExportarXml" class="tool-btn">Exportar XML</button>
+      <button id="btnImportarXml" class="tool-btn">Importar XML</button>
+      <input type="file" id="fileImportarJson" accept=".json" class="hidden">
+      <input type="file" id="fileImportarXml" accept=".xml" class="hidden">
     </div>
   </div>
 
@@ -129,58 +71,69 @@
           <select id="rotinaPerfilId"></select>
         </div>
 
-        <fieldset style="margin-bottom: 15px;">
+        <fieldset style="padding: 15px; margin-bottom: 15px;">
           <legend>Configuração Geral da Rotina</legend>
-          <div style="display:flex; gap:15px; align-items:center; margin-bottom:10px;">
-            <label><input type="checkbox" id="rotinaLoop"> Loop Contínuo</label>
-            <label>Qtd Execuções: <input type="number" id="rotinaQtde" value="1" min="1" style="width:60px;"></label>
+          <div class="flex-row" style="margin-bottom:10px;">
+            <label class="checkbox-label"><input type="checkbox" id="rotinaLoop"> Loop Contínuo</label>
+            <label class="checkbox-label" style="margin-left: 15px;">Qtd Execuções: <input type="number" id="rotinaQtde"
+                value="1" min="1" style="width:70px;"></label>
           </div>
 
           <div style="margin-bottom:10px;">
-            <label><input type="checkbox" id="rotinaUsaParada"> Usar Condição de Parada (se desmarcado, obedece qtd
-              acima)</label>
-            <div id="containerRotinaParada" style="display:none; margin-top:5px; margin-left: 20px;">
-              <select id="rotinaParadaTipo">
+            <label class="checkbox-label"><input type="checkbox" id="rotinaUsaParada"> Usar Condição de Parada (se
+              desmarcado, obedece qtd acima)</label>
+            <div id="containerRotinaParada" class="flex-row" style="display:none; margin-top:10px; margin-left: 25px;">
+              <select id="rotinaParadaTipo" style="width: 150px;">
                 <option value="css">CSS (Id/Class)</option>
                 <option value="xpath">XPath</option>
                 <option value="text">Texto</option>
               </select>
-              <input type="text" id="rotinaParadaValor" placeholder="Seletor de parada">
+              <input type="text" id="rotinaParadaValor" placeholder="Seletor de parada" style="width: 300px;">
             </div>
           </div>
 
-          <div style="margin-bottom:10px;">
-            <label>Auto-recarregar (refresh) em: </label>
-            <input type="number" id="rotinaAutoRefMin" value="0" min="0" placeholder="Min" style="width:50px;"> min
-            <input type="number" id="rotinaAutoRefSeg" value="0" min="0" placeholder="Seg" style="width:50px;"> seg
+          <div class="flex-row" style="margin-bottom:10px;">
+            <label style="margin:0;">Auto-recarregar (refresh) em: </label>
+            <input type="number" id="rotinaAutoRefMin" value="0" min="0" placeholder="Min" style="width:60px;"> min
+            <input type="number" id="rotinaAutoRefSeg" value="0" min="0" placeholder="Seg" style="width:60px;"> seg
           </div>
 
           <div>
-            <label><input type="checkbox" id="rotinaAcionaRevolver"> Acionar Auto Tab Revolver ao finalizar rotina</label>
-            <div id="containerRotinaRevolver" style="display:none; margin-top:5px; margin-left: 20px;">
-              <select id="rotinaRevolverPlaylist"></select>
-              <label style="margin-left:10px;">Timeout (ms): <input type="number" step="1000" id="rotinaRevolverTimeout"
-                  value="0" style="width:70px;"></label>
+            <label class="checkbox-label"><input type="checkbox" id="rotinaAcionaRevolver"> Acionar Auto Tab Revolver ao
+              finalizar rotina</label>
+            <div id="containerRotinaRevolver" class="flex-row"
+              style="display:none; margin-top:10px; margin-left: 25px;">
+              <select id="rotinaRevolverPlaylist" style="width: 250px;"></select>
+              <label class="checkbox-label">Timeout (ms): <input type="number" step="1000" id="rotinaRevolverTimeout"
+                  value="0" style="width:80px;"></label>
             </div>
           </div>
         </fieldset>
 
-        <div class="form-group">
-          <label>Tipo de Rotina:</label>
-          <label><input type="radio" name="rotinaTipo" value="simples" checked> Simples</label>
-          <label><input type="radio" name="rotinaTipo" value="avancada"> Avançada</label>
+        <div class="form-group flex-row">
+          <label style="margin:0; margin-right: 15px;">Tipo de Rotina:</label>
+          <label class="checkbox-label"><input type="radio" name="rotinaTipo" value="simples" checked> Simples</label>
+          <label class="checkbox-label"><input type="radio" name="rotinaTipo" value="avancada"> Avançada</label>
         </div>
 
-        <fieldset id="fsRotinaSimples">
+        <fieldset id="fsRotinaSimples" style="padding: 15px; margin-bottom: 15px;">
           <legend>Configuração Simples</legend>
-          <label>Seletor Alvo: <input type="text" id="rotinaSimplesSeletor"></label><br>
-          <label>Intervalo (ms): <input type="number" step="1000" id="rotinaSimplesIntervalo"></label><br>
-          <label><input type="checkbox" id="rotinaSimplesContinuo"> Clique Contínuo (Loop)</label>
+          <div class="form-group">
+            <label>Seletor Alvo:</label>
+            <input type="text" id="rotinaSimplesSeletor" placeholder="Ex: .botao-continuar">
+          </div>
+          <div class="form-group flex-row">
+            <label class="checkbox-label"><input type="checkbox" id="rotinaSimplesContinuo"> Clique Contínuo
+              (Loop)</label>
+            <label class="checkbox-label" style="margin-left:15px;">Intervalo (ms): <input type="number" step="1000"
+                id="rotinaSimplesIntervalo" style="width:100px;"></label>
+          </div>
         </fieldset>
 
-        <fieldset id="fsRotinaAvancada" class="hidden">
+        <fieldset id="fsRotinaAvancada" class="hidden" style="padding: 15px; margin-bottom: 15px;">
           <legend>Passos Avançados</legend>
-          <button id="btnAdicionarPasso" class="btn btn-sm btn-success" style="margin-bottom:10px;">Adicionar Passo</button>
+          <button id="btnAdicionarPasso" class="btn btn-sm btn-success" style="margin-bottom:10px;">+ Adicionar
+            Passo</button>
           <table class="data-table">
             <thead id="headPassosAvancados">
             </thead>
@@ -220,13 +173,13 @@
         <div class="form-group">
           <label>Dias da Semana Ativos:</label>
           <div class="flex-row" id="perfilDiasContainer">
-            <label><input type="checkbox" value="0"> Dom</label>
-            <label><input type="checkbox" value="1"> Seg</label>
-            <label><input type="checkbox" value="2"> Ter</label>
-            <label><input type="checkbox" value="3"> Qua</label>
-            <label><input type="checkbox" value="4"> Qui</label>
-            <label><input type="checkbox" value="5"> Sex</label>
-            <label><input type="checkbox" value="6"> Sáb</label>
+            <label class="checkbox-label"><input type="checkbox" value="0"> Dom</label>
+            <label class="checkbox-label"><input type="checkbox" value="1"> Seg</label>
+            <label class="checkbox-label"><input type="checkbox" value="2"> Ter</label>
+            <label class="checkbox-label"><input type="checkbox" value="3"> Qua</label>
+            <label class="checkbox-label"><input type="checkbox" value="4"> Qui</label>
+            <label class="checkbox-label"><input type="checkbox" value="5"> Sex</label>
+            <label class="checkbox-label"><input type="checkbox" value="6"> Sáb</label>
           </div>
         </div>
         <div class="form-group flex-row">
@@ -259,27 +212,39 @@
       <div id="detalhesPlaylistContainer" class="hidden">
         <h2>Editando Playlist <button id="btnVoltarPlaylists" class="btn btn-sm btn-secondary">Voltar</button></h2>
         <div class="form-group"><label>Nome da Playlist:</label><input type="text" id="inputNomePlaylist"></div>
+
+        <h3>Itens da Playlist</h3>
         <button id="btnCapturarJanela" class="btn btn-sm btn-secondary">Salvar guias atuais</button>
-        <button id="btnAdicionarItemRevolver" class="btn btn-sm btn-success">Adicionar URL</button>
+        <div class="flex-row" style="margin-top:10px; margin-bottom: 10px;">
+          <button id="btnMarcarTodos" class="btn btn-sm btn-secondary"
+            style="background-color: #6c757d;">Ativar/Desativar Todos</button>
+          <button id="btnRemoverSelecionados" class="btn btn-danger-sm">Remover Selecionados</button>
+        </div>
+
         <table class="data-table">
           <thead>
             <tr>
+              <th style="width: 30px;"><input type="checkbox" id="chkSelectAll"></th>
               <th style="width: 30px;">#</th>
               <th>URL</th>
               <th style="width: 120px;">Tempo (M:S)</th>
-              <th style="width: 60px;">Ativa</th>
-              <th style="width: 80px;">Principal</th>
-              <th style="width: 60px;">Ação</th>
+              <th style="width: 60px; text-align:center;">Ativa</th>
+              <th style="width: 80px; text-align:center;">Principal</th>
+              <th style="width: 60px; text-align:center;">Ação</th>
             </tr>
           </thead>
           <tbody id="playlistItensBody"></tbody>
         </table>
+
+        <button id="btnAdicionarItemRevolver" class="btn btn-sm btn-success" style="margin-bottom: 20px;">+ Adicionar
+          Nova URL</button>
+        <br>
         <button id="btnSalvarRevolver" class="btn btn-primary">Salvar Playlist</button>
       </div>
     </div>
 
   </div>
-  <script type="module" src="options/main.js"></script>
+  <script type="module" src="js/options/main.js"></script>
 </body>
 
 </html>
