@@ -16,8 +16,13 @@ export function initProfiles() {
 
   function renderizarLista() {
     bodyLista.innerHTML = '';
+    const nomesDias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
     perfisLocais.forEach((p, idx) => {
-      const dias = p.dias_semana ? p.dias_semana.join(',') : '-';
+      const dias = p.dias_semana && p.dias_semana.length > 0
+        ? p.dias_semana.map(d => nomesDias[d]).join(', ')
+        : '-';
+
       const horario = p.horario ? `${p.horario.inicio || '*'} as ${p.horario.fim || '*'}` : '-';
       const tr = document.createElement('tr');
       tr.innerHTML = `
