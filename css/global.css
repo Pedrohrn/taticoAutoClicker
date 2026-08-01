@@ -1,13 +1,31 @@
 :root {
   --tatico-red: #d11c1c;
   --tatico-red-hover: #a31515;
-  --tatico-gray-bg: #f4f4f9;
-  --tatico-gray-border: #e0e0e0;
-  --tatico-text: #333333;
-  --tatico-text-light: #555555;
-  --success: #28a745;
-  --danger: #dc3545;
-  --info: #007bff;
+  --bg-color: #f4f4f9;
+  --sidebar-bg: #ffffff;
+  --content-bg: #ffffff;
+  --text-main: #333333;
+  --text-muted: #555555;
+  --border-color: #e0e0e0;
+  --input-bg: #ffffff;
+  --input-border: #ccc;
+  --table-header-bg: #f8f9fa;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --tatico-red: #e74c3c;
+    --tatico-red-hover: #c0392b;
+    --bg-color: #121212;
+    --sidebar-bg: #1e1e1e;
+    --content-bg: #1e1e1e;
+    --text-main: #e0e0e0;
+    --text-muted: #aaaaaa;
+    --border-color: #333333;
+    --input-bg: #2c2c2c;
+    --input-border: #444444;
+    --table-header-bg: #2a2a2a;
+  }
 }
 
 * {
@@ -18,17 +36,17 @@
 
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: var(--tatico-gray-bg);
+  background-color: var(--bg-color);
   display: flex;
   height: 100vh;
-  color: var(--tatico-text);
+  color: var(--text-main);
 }
 
 .sidebar {
   width: 240px;
-  background-color: #ffffff;
-  border-right: 1px solid var(--tatico-gray-border);
-  padding: 20px 10px;
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
+  padding: 20px 0;
   display: flex;
   flex-direction: column;
 }
@@ -36,6 +54,7 @@ body {
 .sidebar-logo {
   text-align: center;
   margin-bottom: 30px;
+  padding: 0 20px;
 }
 
 .sidebar-logo img {
@@ -47,15 +66,17 @@ body {
   flex: 1;
   padding: 30px;
   overflow-y: auto;
+  min-width: 0;
 }
 
 .tab-content {
   display: none;
-  max-width: 900px;
-  background: #ffffff;
+  width: 100%;
+  max-width: 1200px;
+  background: var(--content-bg);
   padding: 25px;
   border-radius: 8px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   margin-bottom: 30px;
 }
 
