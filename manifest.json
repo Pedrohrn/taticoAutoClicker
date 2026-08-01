@@ -12,9 +12,6 @@
   "background": {
     "service_worker": "background.js"
   },
-  "action": {
-    "default_popup": "popup.html"
-  },
   "options_page": "options.html",
   "icons": {
     "16": "logo.png",
@@ -22,7 +19,8 @@
     "128": "logo.png"
   },
   "action": {
-    "default_icon": "logo.png"
+    "default_icon": "logo.png",
+    "default_popup": "popup.html"
   },
   "content_scripts": [
     {
