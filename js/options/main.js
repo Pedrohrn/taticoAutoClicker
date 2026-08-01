@@ -1,5 +1,5 @@
-import { initProfiles } from './profiles.js';
-import { initRoutines } from './routines.js';
+import { initProfiles } from './profile.js';
+import { initRoutines } from './routine.js';
 import { initRevolver } from './revolver.js';
 import { initStorage } from './storage.js';
 
