@@ -10,7 +10,7 @@
     "tabs"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "js/background/background.js"
   },
   "options_page": "options.html",
   "icons": {
@@ -24,12 +24,8 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "*://*/*"
-      ],
-      "js": [
-        "autoClicker.js"
-      ],
+      "matches": ["*://*/*"],
+      "js": ["js/content/autoClicker.js"],
       "run_at": "document_end"
     }
   ],
