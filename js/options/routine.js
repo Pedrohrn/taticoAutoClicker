@@ -137,7 +137,7 @@ export function initRoutines() {
     document.getElementById('containerRotinaParada').style.display = e.target.checked ? 'block' : 'none';
   });
   document.getElementById('rotinaAcionaRevolver').addEventListener('change', (e) => {
-    document.getElementById('containerRotinaRevolver').style.display = e.target.checked ? 'block' : 'none';
+    document.getElementById('containerRotinaRevolver').style.display = e.target.checked ? 'inline-flex' : 'none';
   });
 
   function atualizarComboboxPlaylists(idSelecionado) {
