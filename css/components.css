@@ -227,7 +227,59 @@ legend {
   background: rgba(0, 0, 0, 0.05);
 }
 
-/* Tables */
+/* Theme Switch Pill */
+.theme-switch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.theme-switch-pill {
+  width: 44px;
+  height: 22px;
+  background-color: #ccc;
+  border-radius: 11px;
+  position: relative;
+  transition: background 0.3s;
+}
+
+.theme-switch-pill::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+[data-theme="dark"] .theme-switch-pill {
+  background-color: var(--tatico-red);
+}
+
+[data-theme="dark"] .theme-switch-pill::after {
+  transform: translateX(22px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .theme-switch-pill {
+    background-color: var(--tatico-red);
+  }
+
+  :root:not([data-theme="light"]) .theme-switch-pill::after {
+    transform: translateX(22px);
+  }
+}
+
+/* Tables & Utils */
 .data-table {
   width: 100%;
   border-collapse: collapse;
@@ -257,7 +309,6 @@ legend {
   color: #888;
 }
 
-/* Utils */
 .flex-row {
   display: flex;
   gap: 10px;
