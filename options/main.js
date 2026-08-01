@@ -1,4 +1,4 @@
-import { initProfiles } from './profile.js';
+import { initProfiles } from './profiles.js';
 import { initRoutines } from './routines.js';
 import { initRevolver } from './revolver.js';
 import { initStorage } from './storage.js';
@@ -20,10 +20,9 @@ function garantirEstadoInicial() {
 document.addEventListener('DOMContentLoaded', () => {
   garantirEstadoInicial();
 
-  // logica isolada para navegacao de abas no layout global
   // mapeio botoes e submenus respeitando o estado ativo e parentesco no menu
   const navGroupTitles = document.querySelectorAll('.nav-group-title');
-  const navBtns = document.querySelectorAll('.nav-btn');
+  const navBtns = document.querySelectorAll('.nav-btn.sub-btn, .nav-group-title[data-target]');
   const tabContents = document.querySelectorAll('.tab-content');
 
   navGroupTitles.forEach(title => {
@@ -31,45 +30,36 @@ document.addEventListener('DOMContentLoaded', () => {
       const group = title.closest('.nav-group');
       if (group) group.classList.toggle('open');
 
-      // aplico logica de aba caso o titulo root seja clicavel diretamente (ex: revolver)
-      if (title.dataset.target) {
-        navBtns.forEach(b => b.classList.remove('active'));
-        navGroupTitles.forEach(t => t.classList.remove('active'));
-        title.classList.add('active');
-
-        tabContents.forEach(c => c.classList.remove('active'));
-        const targetId = title.dataset.target;
-        if (targetId && document.getElementById(targetId)) {
-          document.getElementById(targetId).classList.add('active');
-        }
-      }
+      if (title.dataset.target) ativarMenu(title);
     });
   });
 
   navBtns.forEach(btn => {
-    // anulo propagacao nos nav-group-titles pois sao independentes
+    // anulo propagacao nos nav-group-titles pois ja sao tratados acima
     if (btn.classList.contains('nav-group-title')) return;
-
-    btn.addEventListener('click', () => {
-      navBtns.forEach(b => b.classList.remove('active'));
-      navGroupTitles.forEach(t => t.classList.remove('active'));
-      tabContents.forEach(c => c.classList.remove('active'));
-
-      btn.classList.add('active');
-
-      // conservo o brilho no menu pai caso um de seus submenus seja ativo
-      const group = btn.closest('.nav-group');
-      if (group) {
-        const title = group.querySelector('.nav-group-title');
-        if (title) title.classList.add('active');
-      }
-
-      const targetId = btn.dataset.target;
-      if (targetId && document.getElementById(targetId)) {
-        document.getElementById(targetId).classList.add('active');
-      }
-    });
+    btn.addEventListener('click', () => ativarMenu(btn));
   });
+
+  function ativarMenu(btnAtivo) {
+    document.querySelectorAll('.nav-btn, .nav-group-title').forEach(b => {
+      b.classList.remove('active');
+      b.classList.remove('active-parent');
+    });
+    tabContents.forEach(c => c.classList.remove('active'));
+
+    btnAtivo.classList.add('active');
+
+    const group = btnAtivo.closest('.nav-group');
+    if (group) {
+      const title = group.querySelector('.nav-group-title');
+      if (title) title.classList.add('active-parent');
+    }
+
+    const targetId = btnAtivo.dataset.target;
+    if (targetId && document.getElementById(targetId)) {
+      document.getElementById(targetId).classList.add('active');
+    }
+  }
 
   // inicializo os submodulos injetando o escopo
   initProfiles();
