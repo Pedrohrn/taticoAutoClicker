@@ -200,7 +200,7 @@ export function initRoutines() {
     if (head) {
       head.innerHTML = `<tr>
         <th style="width:30px;"></th>
-        <th style="width:90px;">Ação</th>
+        <th style="width:125px;">Ação</th>
         <th style="width:90px;">Tipo Sel.</th>
         <th>Alvo Principal</th>
         <th style="width:70px;">Atraso</th>
@@ -253,7 +253,7 @@ export function initRoutines() {
           </select>
         </td>
         <td><input type="text" class="p-valor" value="${p.valor_seletor}"></td>
-        <td><input type="number" step="1000" class="p-delay" value="${p.delay_ms}" style="width:60px;"></td>
+        <td><input type="number" step="1000" class="p-delay" value="${p.delay_ms}" style="width:100%;"></td>
         <td>${regrasHtml}</td>
         <td style="text-align:center;"><button class="btn btn-sm btn-danger btn-del-passo" data-idx="${idx}">X</button></td>
       `;
