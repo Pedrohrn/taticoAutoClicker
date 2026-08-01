@@ -36,7 +36,7 @@ async function executarRotinaAvancada(rotina) {
     refreshTimer = setTimeout(() => { location.reload(); }, timeMs);
   }
 
-  // analiso e respeito a qtde executada vs as regras de loop
+  // analiso e respeito a qtde executada vs as regras de loop (criterio principal)
   while (!abortar && (rotina.loop || qtdeExecutado < (rotina.qtde_execucoes || 1))) {
     if (rotina.usa_parada && verificarParada(rotina.condicao_parada)) {
       console.log(`Fila abortada via Condicao de Parada Global: ${rotina.nome}`);
@@ -117,7 +117,7 @@ function iniciarFilaRotinasSimples(rotina) {
       return;
     }
 
-    const elemento = encontrarElemento('css', cfg.seletor_alvo); // fallback legad
+    const elemento = encontrarElemento('css', cfg.seletor_alvo);
     if (elemento) {
       elemento.click();
       if (!cfg.clique_continuo) clearInterval(intervalo);
