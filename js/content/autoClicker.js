@@ -31,12 +31,11 @@ async function executarRotinaAvancada(rotina) {
   let qtdeExecutado = 0;
   let refreshTimer = null;
 
-  if (rotina.autorefresh_min > 0 || rotina.autorefresh_seg > 0) {
+  if (rotina.autorefresh_ativo && (rotina.autorefresh_min > 0 || rotina.autorefresh_seg > 0)) {
     const timeMs = ((rotina.autorefresh_min || 0) * 60 + (rotina.autorefresh_seg || 0)) * 1000;
     refreshTimer = setTimeout(() => { location.reload(); }, timeMs);
   }
 
-  // analiso e respeito a qtde executada vs as regras de loop (criterio principal)
   while (!abortar && (rotina.loop || qtdeExecutado < (rotina.qtde_execucoes || 1))) {
     if (rotina.usa_parada && verificarParada(rotina.condicao_parada)) {
       console.log(`Fila abortada via Condicao de Parada Global: ${rotina.nome}`);
@@ -52,42 +51,55 @@ async function executarRotinaAvancada(rotina) {
       }
 
       if (passo.acao === 'click') {
-        // 0 indica loop infinito no passo até que a condição de parada o interrompa
-        const isInfinito = passo.click_qtde === 0;
-        const maxClicks = isInfinito ? 1 : (passo.click_qtde || 1);
-        let c = 0;
+        const limiteClicks = passo.click_qtde || 1;
+        let cliquesFeitos = 0;
 
-        // uso while para contemplar o loop iterativo sem limites quando isInfinito for true
-        while (isInfinito || c < maxClicks) {
+        // se a qtde for exatamente 1 e houver condicao de parada configurada, a intencao logica e
+        // manter um comportamento persistente de tentativa ate a condicao ser satisfeita.
+        const sobreporLimitePorParada = (limiteClicks === 1 && passo.parada_seletor !== '');
+
+        while (true) {
           if (abortar) break;
 
-          // busco a condicao de parada a cada iteracao
+          // prioritario: avalio se alcancou a condicao de parada definida no passo
           if (passo.parada_seletor && encontrarElemento(passo.parada_tipo || 'css', passo.parada_seletor)) {
-            console.log(`Parada de passo atingida. Pulando para proximo passo.`);
+            console.log(`Parada de passo atingida. Pulando para o proximo.`);
             break;
           }
 
           const alvo = encontrarElemento(passo.tipo_seletor, passo.valor_seletor);
-          if (alvo) alvo.click();
 
-          // aguardo o intervalo se for infinito ou se nao for o ultimo clique da grade finita
-          if (isInfinito || c < maxClicks - 1) {
-            await new Promise(res => setTimeout(res, passo.click_intervalo_ms || 1000));
+          if (!alvo) {
+            // alvo sumiu do DOM durante uma execucao continuada (ja clicou pelo menos uma vez)
+            if (cliquesFeitos > 0) {
+              break;
+            }
+            // o primeiro click e garantido pela regra; se ainda nao apareceu, aguardo ate surgir
+            await new Promise(res => setTimeout(res, 1000));
+            continue;
           }
 
-          c++;
+          // click estrito garantido
+          alvo.click();
+          cliquesFeitos++;
+
+          // finalizo o laco condicional caso o limite logico tenha se concretizado
+          if (!sobreporLimitePorParada && limiteClicks > 0 && cliquesFeitos >= limiteClicks) {
+            break;
+          }
+
+          // aguardo o delay especificado entre os clicks iterativos
+          await new Promise(res => setTimeout(res, passo.click_intervalo_ms || 1000));
         }
       }
       else if (passo.acao === 'wait') {
-        if (passo.wait_block !== false) {
-          let achou = false;
-          while (!achou && !abortar) {
-            if (encontrarElemento(passo.tipo_seletor, passo.valor_seletor)) {
-              achou = true;
-            } else {
-              await new Promise(res => setTimeout(res, 1000));
-            }
+        // block_wait removido; acao "aguardar" agora significa inerentemente segurar ate encontrar.
+        while (true) {
+          if (abortar) break;
+          if (encontrarElemento(passo.tipo_seletor, passo.valor_seletor)) {
+            break;
           }
+          await new Promise(res => setTimeout(res, 1000));
         }
       }
     }
@@ -96,7 +108,6 @@ async function executarRotinaAvancada(rotina) {
 
   if (refreshTimer) clearTimeout(refreshTimer);
 
-  // rotina abortada ou iterada por completo; ativo trigger do autotab se setado
   if (rotina.acionar_revolver && rotina.revolver_playlist_id && !abortar) {
     console.log('Rotina concluida. Acionando Auto Tab Revolver...');
     setTimeout(() => {
