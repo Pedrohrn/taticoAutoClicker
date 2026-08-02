@@ -1,16 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const btnToggle = document.getElementById('btnToggle');
+  const btnToggleRevolver = document.getElementById('btnToggleRevolver');
+  const btnToggleAutoClicker = document.getElementById('btnToggleAutoClicker');
+  const btnToggleStatusBar = document.getElementById('btnToggleStatusBar');
   const btnOpcoes = document.getElementById('btnOpcoes');
-  const textoStatus = document.getElementById('textoStatus');
+  
+  const textoStatusRevolver = document.getElementById('textoStatusRevolver');
+  const textoRotinaAtual = document.getElementById('textoRotinaAtual');
 
-  // implemento a reatividade unificada de tema e disparo logo no boot
   function aplicarTema(tema) {
     document.documentElement.setAttribute('data-theme', tema);
   }
 
-  chrome.storage.local.get(['theme'], (res) => {
+  // resolvo o estado inicial
+  chrome.storage.local.get(['theme', 'statusBarClosed', 'autoClickerPaused', 'rotinaAtualNome'], (res) => {
     const temaPadrao = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     aplicarTema(res.theme || temaPadrao);
+    textoRotinaAtual.textContent = res.rotinaAtualNome || "Nenhuma";
+    atualizarUiBotoes(res);
   });
 
   document.getElementById('btnToggleTheme').addEventListener('click', () => {
@@ -19,49 +25,75 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.set({ theme: isDark ? 'light' : 'dark' });
   });
 
-  // gerencio o fluxo de parada e ui do controle de rotatividade global
-  function atualizarInterface() {
+  function atualizarUiBotoes(estado) {
+    if (estado.autoClickerPaused !== undefined) {
+      if (estado.autoClickerPaused) {
+        btnToggleAutoClicker.textContent = "Retomar AutoClicker";
+        btnToggleAutoClicker.className = "btn btn-success btn-block";
+      } else {
+        btnToggleAutoClicker.textContent = "Pausar AutoClicker";
+        btnToggleAutoClicker.className = "btn btn-secondary btn-block";
+      }
+    }
+
+    if (estado.statusBarClosed !== undefined) {
+      if (estado.statusBarClosed) {
+        btnToggleStatusBar.textContent = "Exibir Barra de Status UI";
+        btnToggleStatusBar.className = "btn btn-success btn-block";
+      } else {
+        btnToggleStatusBar.textContent = "Ocultar Barra de Status UI";
+        btnToggleStatusBar.className = "btn btn-warning btn-block";
+      }
+    }
+  }
+
+  function atualizarStatusRevolver() {
     chrome.runtime.sendMessage({ action: "obterStatusRevolver" }, (response) => {
       const rodando = response && response.rodando;
       if (rodando) {
-        textoStatus.textContent = "Status: Rodando (ON)";
-        textoStatus.style.color = "var(--success)";
-        btnToggle.textContent = "Pausar Revolver";
-        btnToggle.className = "btn btn-danger";
+        textoStatusRevolver.textContent = "Rodando (ON)";
+        textoStatusRevolver.style.color = "var(--success)";
+        btnToggleRevolver.textContent = "Pausar Revolver";
+        btnToggleRevolver.className = "btn btn-danger btn-block";
       } else {
-        textoStatus.textContent = "Status: Pausado (OFF)";
-        textoStatus.style.color = "var(--text-muted)";
-        btnToggle.textContent = "Iniciar Revolver";
-        btnToggle.className = "btn btn-success";
+        textoStatusRevolver.textContent = "Pausado (OFF)";
+        textoStatusRevolver.style.color = "var(--text-main)";
+        btnToggleRevolver.textContent = "Iniciar Revolver";
+        btnToggleRevolver.className = "btn btn-success btn-block";
       }
     });
   }
 
-  // hooko o onchange nativo do chrome para espelhar as acoes em milisegundos
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
-      if (changes.theme) {
-        aplicarTema(changes.theme.newValue);
-      }
-      if (changes.revolverAtivo || changes.playlistIdAtiva) {
-        atualizarInterface();
-      }
+      if (changes.theme) aplicarTema(changes.theme.newValue);
+      if (changes.revolverAtivo || changes.playlistIdAtiva) atualizarStatusRevolver();
+      if (changes.autoClickerPaused) atualizarUiBotoes({ autoClickerPaused: changes.autoClickerPaused.newValue });
+      if (changes.statusBarClosed) atualizarUiBotoes({ statusBarClosed: changes.statusBarClosed.newValue });
+      if (changes.rotinaAtualNome) textoRotinaAtual.textContent = changes.rotinaAtualNome.newValue || "Nenhuma";
     }
   });
 
-  btnToggle.addEventListener('click', () => {
+  btnToggleRevolver.addEventListener('click', () => {
     chrome.runtime.sendMessage({ action: "obterStatusRevolver" }, (response) => {
       const rodando = response && response.rodando;
-      const novoEstado = !rodando;
-      chrome.storage.local.set({ revolverAtivo: novoEstado }, () => {
-        atualizarInterface();
-      });
+      chrome.storage.local.set({ revolverAtivo: !rodando }, atualizarStatusRevolver);
     });
   });
 
-  btnOpcoes.addEventListener('click', () => {
-    chrome.runtime.openOptionsPage();
+  btnToggleAutoClicker.addEventListener('click', () => {
+    chrome.storage.local.get(['autoClickerPaused'], (res) => {
+      chrome.storage.local.set({ autoClickerPaused: !res.autoClickerPaused });
+    });
   });
 
-  atualizarInterface();
+  btnToggleStatusBar.addEventListener('click', () => {
+    chrome.storage.local.get(['statusBarClosed'], (res) => {
+      chrome.storage.local.set({ statusBarClosed: !res.statusBarClosed });
+    });
+  });
+
+  btnOpcoes.addEventListener('click', () => chrome.runtime.openOptionsPage());
+
+  atualizarStatusRevolver();
 });

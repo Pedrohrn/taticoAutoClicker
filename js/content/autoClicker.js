@@ -1,36 +1,152 @@
-// function capturarElementoPorTexto(textoProcurado) {
-//   const regex = new RegExp(textoProcurado, 'i');
+// modulo isolado da ui injetavel
+class TaticoStatusBarUI {
+  constructor() {
+    this.elemento = null;
+    this.posicao = 'bottom-center';
+    this.estado = {
+      fechada: false,
+      minimizada: false,
+      autoClickerPaused: false,
+      revolverAtivo: false,
+      passoAtual: 0,
+      passoTotal: 0,
+      statusPasso: 'loading',
+      tempoRefreshTexto: ''
+    };
+  }
 
-//   const elementos = document.querySelectorAll('body *');
-//   let elementoAlvo = null;
+  async inicializar(nomeRotinaAtiva) {
+    chrome.storage.local.set({ rotinaAtualNome: nomeRotinaAtiva || "Ativa" });
+    const res = await chrome.storage.local.get(['statusBarPos', 'statusBarMinimized', 'statusBarClosed', 'autoClickerPaused', 'revolverAtivo']);
+    
+    this.posicao = res.statusBarPos || 'bottom-center';
+    this.estado.minimizada = !!res.statusBarMinimized;
+    this.estado.fechada = !!res.statusBarClosed;
+    this.estado.autoClickerPaused = !!res.autoClickerPaused;
+    this.estado.revolverAtivo = !!res.revolverAtivo;
 
-//   for (let el of elementos) {
-//     if (regex.test(el.textContent) && ![...el.children].some(child => regex.test(child.textContent))) {
-//       elementoAlvo = el;
-//       break;
-//     }
-//   }
+    this.construirDOM();
+    this.escutarAlteracoesStorage();
+  }
 
-//   if (!elementoAlvo) return null;
+  construirDOM() {
+    if (document.getElementById('tatico-statusbar-inj')) return;
 
-//   const ehClicavel = (el) => {
-//     const tagsClicaveis = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
-//     return tagsClicaveis.includes(el.tagName) ||
-//       el.hasAttribute('onclick') ||
-//       el.getAttribute('role') === 'button' ||
-//       window.getComputedStyle(el).cursor === 'pointer';
-//   };
+    this.elemento = document.createElement('div');
+    this.elemento.id = 'tatico-statusbar-inj';
+    document.body.appendChild(this.elemento);
 
-//   let atual = elementoAlvo;
-//   while (atual && atual !== document.body) {
-//     if (ehClicavel(atual)) {
-//       return atual;
-//     }
-//     atual = atual.parentElement;
-//   }
+    this.elemento.addEventListener('click', (e) => {
+      // expando ao clicar na seta quando minimizado
+      if (this.estado.minimizada && e.target.closest('.tsb-min-icon')) {
+        this.estado.minimizada = false;
+        chrome.storage.local.set({ statusBarMinimized: false });
+        this.renderizarConteudo();
+      }
+    });
 
-//   return elementoAlvo;
-// }
+    this.renderizarConteudo();
+  }
+
+  renderizarConteudo() {
+    if (!this.elemento) return;
+    
+    this.elemento.className = `tatico-statusbar tsb-pos-${this.posicao}`;
+    if (this.estado.fechada) this.elemento.classList.add('is-closed');
+    if (this.estado.minimizada) this.elemento.classList.add('is-minimized');
+
+    const iconStatusMap = {
+      'done': '<span class="tsb-status-icon done">\u2713</span>',
+      'error': '<span class="tsb-status-icon error">\u2715</span>',
+      'loading': '<span class="tsb-status-icon loading">?</span>'
+    };
+
+    if (this.estado.minimizada) {
+      this.elemento.innerHTML = `<div class="tsb-min-icon" title="Expandir Tatico">\u25B2</div>`;
+      return;
+    }
+
+    this.elemento.innerHTML = `
+      <div class="tsb-content">
+        <span class="tsb-label">Passo ${this.estado.passoAtual}/${this.estado.passoTotal} ${iconStatusMap[this.estado.statusPasso] || iconStatusMap['loading']}</span>
+        
+        <button id="tsb-btn-ac" class="tsb-btn" title="Alternar AutoClicker">
+          ${this.estado.autoClickerPaused ? '\u25B6 AC' : '\u23F8 AC'}
+        </button>
+        
+        <button id="tsb-btn-rev" class="tsb-btn" title="Alternar Revolver">
+          ${this.estado.revolverAtivo ? '\u23F8 REV' : '\u25B6 REV'}
+        </button>
+        
+        ${this.estado.tempoRefreshTexto ? `<span class="tsb-label">\u23F2 ${this.estado.tempoRefreshTexto}</span>` : ''}
+        
+        <button id="tsb-btn-conf" class="tsb-btn" title="Configurações">\u2699</button>
+        <button id="tsb-btn-min" class="tsb-btn" title="Minimizar">\u25BC</button>
+        <button id="tsb-btn-close" class="tsb-btn" title="Fechar (Reabrir via Popup)">\u2715</button>
+      </div>
+    `;
+
+    this.bindEventosInternos();
+  }
+
+  bindEventosInternos() {
+    document.getElementById('tsb-btn-ac')?.addEventListener('click', () => {
+      chrome.storage.local.set({ autoClickerPaused: !this.estado.autoClickerPaused });
+    });
+    
+    document.getElementById('tsb-btn-rev')?.addEventListener('click', () => {
+      chrome.storage.local.set({ revolverAtivo: !this.estado.revolverAtivo });
+    });
+    
+    document.getElementById('tsb-btn-conf')?.addEventListener('click', () => {
+      chrome.runtime.sendMessage({ action: "openOptions" });
+    });
+    
+    document.getElementById('tsb-btn-min')?.addEventListener('click', () => {
+      this.estado.minimizada = true;
+      chrome.storage.local.set({ statusBarMinimized: true });
+      this.renderizarConteudo();
+    });
+    
+    document.getElementById('tsb-btn-close')?.addEventListener('click', () => {
+      this.estado.fechada = true;
+      chrome.storage.local.set({ statusBarClosed: true });
+      this.renderizarConteudo();
+    });
+  }
+
+  escutarAlteracoesStorage() {
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+      if (namespace === 'local') {
+        let mudouUi = false;
+        if (changes.statusBarPos) { this.posicao = changes.statusBarPos.newValue; mudouUi = true; }
+        if (changes.statusBarMinimized) { this.estado.minimizada = !!changes.statusBarMinimized.newValue; mudouUi = true; }
+        if (changes.statusBarClosed) { this.estado.fechada = !!changes.statusBarClosed.newValue; mudouUi = true; }
+        if (changes.autoClickerPaused) { this.estado.autoClickerPaused = !!changes.autoClickerPaused.newValue; mudouUi = true; }
+        if (changes.revolverAtivo) { this.estado.revolverAtivo = !!changes.revolverAtivo.newValue; mudouUi = true; }
+        
+        if (mudouUi) this.renderizarConteudo();
+      }
+    });
+  }
+
+  atualizarProgresso(atual, total, status) {
+    this.estado.passoAtual = atual;
+    this.estado.passoTotal = total;
+    this.estado.statusPasso = status;
+    this.renderizarConteudo();
+  }
+
+  atualizarTimerUI(texto) {
+    if (this.estado.tempoRefreshTexto !== texto) {
+      this.estado.tempoRefreshTexto = texto;
+      this.renderizarConteudo();
+    }
+  }
+}
+
+// instancio globalmente para acesso nos loops de avaliacao
+window.taticoUI = new TaticoStatusBarUI();
 
 function encontrarElemento(tipo, seletor) {
   if (!seletor) return null;
@@ -43,7 +159,6 @@ function encontrarElemento(tipo, seletor) {
     }
     if (tipo === 'text') {
       const todos = document.querySelectorAll('*');
-
       for (let el of todos) {
         if (el.textContent.trim() === seletor) return el;
       }
@@ -59,6 +174,12 @@ function verificarParada(condicao) {
   return encontrarElemento(condicao.tipo || 'css', condicao.valor_seletor) !== null;
 }
 
+async function resolverPausaAc() {
+  while (window.taticoUI && window.taticoUI.estado.autoClickerPaused) {
+    await new Promise(r => setTimeout(r, 1000));
+  }
+}
+
 async function executarRotinaAvancada(rotina) {
   console.log(`Iniciando Fila Avancada: ${rotina.nome}`);
 
@@ -66,10 +187,25 @@ async function executarRotinaAvancada(rotina) {
   let qtdeExecutado = 0;
   let refreshTimer = null;
 
-  if (rotina.autorefresh && (rotina.autorefresh_min > 0 || rotina.autorefresh_seg > 0)) {
+  if (rotina.autorefresh_ativo && (rotina.autorefresh_min > 0 || rotina.autorefresh_seg > 0)) {
     const timeMs = ((rotina.autorefresh_min || 0) * 60 + (rotina.autorefresh_seg || 0)) * 1000;
-    console.log(`A página será automáticamente recarregada em ${rotina.autorefresh_min}:${rotina.autorefresh_seg} `)
-    refreshTimer = setTimeout(() => { console.log("recarregando página"); location.reload(); }, timeMs);
+    console.log(`A página será automáticamente recarregada em ${rotina.autorefresh_min}:${rotina.autorefresh_seg}`);
+    refreshTimer = setTimeout(() => { location.reload(); }, timeMs);
+
+    // disparo periodico atualizando a badge no content script e UI injetavel
+    let counterMs = timeMs;
+    setInterval(() => {
+      if (counterMs > 0 && !window.taticoUI.estado.autoClickerPaused) {
+        counterMs -= 5000;
+        if (counterMs < 0) counterMs = 0;
+        const mm = Math.floor(counterMs / 60000);
+        const ss = Math.floor((counterMs % 60000) / 1000);
+        const txt = `${mm}:${ss.toString().padStart(2, '0')}`;
+        
+        window.taticoUI.atualizarTimerUI(txt);
+        chrome.runtime.sendMessage({ action: "updateBadge", text: txt });
+      }
+    }, 5000);
   }
 
   while (!abortar && (rotina.loop || qtdeExecutado < (rotina.qtde_execucoes || 1))) {
@@ -79,70 +215,77 @@ async function executarRotinaAvancada(rotina) {
       break;
     }
 
-    for (let passo of rotina.passos_avancados) {
+    for (let index = 0; index < rotina.passos_avancados.length; index++) {
+      const passo = rotina.passos_avancados[index];
       if (abortar) break;
+
+      await resolverPausaAc();
+      window.taticoUI.atualizarProgresso(index + 1, rotina.passos_avancados.length, 'loading');
 
       if (passo.delay_ms > 0) {
         await new Promise(res => setTimeout(res, passo.delay_ms));
       }
 
+      let alvoEncontrado = false;
+
       if (passo.acao === 'click') {
         const limiteClicks = passo.click_qtde || 1;
         let cliquesFeitos = 0;
 
-        // se a qtde for exatamente 1 e houver condicao de parada configurada, a intencao logica e
-        // manter um comportamento persistente de tentativa ate a condicao ser satisfeita.
         const sobreporLimitePorParada = (limiteClicks === 1 && passo.parada_seletor !== '');
 
         while (true) {
+          await resolverPausaAc();
           if (abortar) break;
 
-          // prioritario: avalio se alcancou a condicao de parada definida no passo
           if (passo.parada_seletor && encontrarElemento(passo.parada_tipo || 'css', passo.parada_seletor)) {
             console.log(`Parada de passo atingida. Pulando para o proximo.`);
+            alvoEncontrado = true;
             break;
           }
 
           const alvo = encontrarElemento(passo.tipo_seletor, passo.valor_seletor);
 
           if (!alvo) {
-            // alvo sumiu do DOM durante uma execucao continuada (ja clicou pelo menos uma vez)
             if (cliquesFeitos > 0) {
+              alvoEncontrado = true;
               break;
             }
-            // o primeiro click e garantido pela regra; se ainda nao apareceu, aguardo ate surgir
             await new Promise(res => setTimeout(res, 1000));
             continue;
           }
 
-          // click estrito garantido
           alvo.click();
           cliquesFeitos++;
+          alvoEncontrado = true;
 
-          // finalizo o laco condicional caso o limite logico tenha se concretizado
           if (!sobreporLimitePorParada && limiteClicks > 0 && cliquesFeitos >= limiteClicks) {
             break;
           }
 
-          // aguardo o delay especificado entre os clicks iterativos
           await new Promise(res => setTimeout(res, passo.click_intervalo_ms || 1000));
         }
       }
       else if (passo.acao === 'wait') {
-        // block_wait removido; acao "aguardar" agora significa inerentemente segurar ate encontrar.
         while (true) {
+          await resolverPausaAc();
           if (abortar) break;
           if (encontrarElemento(passo.tipo_seletor, passo.valor_seletor)) {
+            alvoEncontrado = true;
             break;
           }
           await new Promise(res => setTimeout(res, 1000));
         }
       }
+
+      if (alvoEncontrado) {
+        window.taticoUI.atualizarProgresso(index + 1, rotina.passos_avancados.length, 'done');
+      } else {
+        window.taticoUI.atualizarProgresso(index + 1, rotina.passos_avancados.length, 'error');
+      }
     }
     qtdeExecutado++;
   }
-
-  // if (refreshTimer) clearTimeout(refreshTimer);
 
   if (rotina.acionar_revolver && rotina.revolver_playlist_id && !abortar) {
     console.log('Rotina concluida. Acionando Auto Tab Revolver...');
@@ -155,19 +298,29 @@ async function executarRotinaAvancada(rotina) {
   }
 }
 
-function iniciarFilaRotinasSimples(rotina) {
+async function iniciarFilaRotinasSimples(rotina) {
   const cfg = rotina.config_simples;
-  const intervalo = setInterval(() => {
+  
+  // mocko passo simples pra ui injetavel
+  window.taticoUI.atualizarProgresso(1, 1, 'loading');
+
+  const intervalo = setInterval(async () => {
+    await resolverPausaAc();
+
     if (rotina.usa_parada && verificarParada(rotina.condicao_parada)) {
       console.log(`Fila simples abortada via Condicao de Parada: ${rotina.nome}`);
       clearInterval(intervalo);
+      window.taticoUI.atualizarProgresso(1, 1, 'done');
       return;
     }
 
     const elemento = encontrarElemento('css', cfg.seletor_alvo);
     if (elemento) {
       elemento.click();
+      window.taticoUI.atualizarProgresso(1, 1, 'done');
       if (!cfg.clique_continuo) clearInterval(intervalo);
+    } else {
+      window.taticoUI.atualizarProgresso(1, 1, 'loading');
     }
   }, cfg.intermitencia_ms);
 }
@@ -200,9 +353,15 @@ window.addEventListener('load', () => {
     }
 
     const rotinasDoPerfil = rotinas.filter(r => r.perfil_id === perfilAtivo.id && r.ativa);
-    rotinasDoPerfil.forEach(rotina => {
-      if (rotina.tipo === 'simples') iniciarFilaRotinasSimples(rotina);
-      else executarRotinaAvancada(rotina);
-    });
+
+    if (rotinasDoPerfil.length > 0) {
+      // inicio a ui centralizada passando a primeira rotina para track
+      window.taticoUI.inicializar(rotinasDoPerfil[0].nome);
+      
+      rotinasDoPerfil.forEach(rotina => {
+        if (rotina.tipo === 'simples') iniciarFilaRotinasSimples(rotina);
+        else executarRotinaAvancada(rotina);
+      });
+    }
   });
 });

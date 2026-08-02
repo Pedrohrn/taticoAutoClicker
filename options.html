@@ -17,12 +17,14 @@
     <div class="nav-group open" id="group-autoclicker">
       <button class="nav-group-title active-parent">AutoClicker</button>
       <div class="nav-submenus">
-        <button class="nav-btn sub-btn active" data-target="tab-rotinas">Rotinas</button>
         <button class="nav-btn sub-btn" data-target="tab-perfis">Perfis</button>
+        <button class="nav-btn sub-btn active" data-target="tab-rotinas">Rotinas</button>
       </div>
     </div>
 
     <button class="nav-group-title" data-target="tab-revolver">Auto Tab Revolver</button>
+
+    <button class="nav-btn" data-target="tab-configuracoes">Configurações Gerais</button>
 
     <div class="sidebar-tools">
       <button id="btnExportarJson" class="tool-btn">Exportar JSON</button>
@@ -249,6 +251,27 @@
           Nova URL</button>
         <br>
         <button id="btnSalvarRevolver" class="btn btn-primary">Salvar Playlist</button>
+      </div>
+    </div>
+
+    <div id="tab-configuracoes" class="tab-content">
+      <h2>Configurações Gerais</h2>
+      <div class="form-group">
+        <label>Posição da Barra de Status na Injeção da Tela:</label>
+        <select id="configStatusBarPos" style="max-width: 300px; padding: 5px;">
+          <option value="bottom-center">Inferior - Centro</option>
+          <option value="bottom-start">Inferior - Esquerda</option>
+          <option value="bottom-end">Inferior - Direita</option>
+          <option value="top-center">Superior - Centro</option>
+          <option value="top-start">Superior - Esquerda</option>
+          <option value="top-end">Superior - Direita</option>
+          <option value="left-center">Lateral Esquerda - Centro</option>
+          <option value="left-start">Lateral Esquerda - Topo</option>
+          <option value="left-end">Lateral Esquerda - Base</option>
+          <option value="right-center">Lateral Direita - Centro</option>
+          <option value="right-start">Lateral Direita - Topo</option>
+          <option value="right-end">Lateral Direita - Base</option>
+        </select>
       </div>
     </div>
 

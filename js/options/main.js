@@ -61,6 +61,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  const selectStatusBarPos = document.getElementById('configStatusBarPos');
+  if (selectStatusBarPos) {
+    chrome.storage.local.get(['statusBarPos'], (res) => {
+      if (res.statusBarPos) selectStatusBarPos.value = res.statusBarPos;
+    });
+    selectStatusBarPos.addEventListener('change', (e) => {
+      chrome.storage.local.set({ statusBarPos: e.target.value });
+    });
+  }
+
   // inicializo os submodulos injetando o escopo
   initProfiles();
   initRoutines();

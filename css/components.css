@@ -415,3 +415,77 @@ legend {
     align-items: stretch;
   }
 }
+
+.tatico-statusbar {
+  position: fixed;
+  z-index: 2147483647;
+  opacity: 0.2;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  background: var(--sidebar-bg, #2b2b2b);
+  color: var(--text-main, #ffffff);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 6px;
+  padding: 8px 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  font-size: 13px;
+}
+.tatico-statusbar:hover {
+  opacity: 1;
+}
+.tatico-statusbar.is-closed {
+  display: none !important;
+}
+.tatico-statusbar.is-minimized {
+  padding: 4px 8px;
+  cursor: pointer;
+  background: var(--primary, #007bff);
+}
+.tatico-statusbar .tsb-content {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.tatico-statusbar.is-minimized .tsb-content {
+  display: none;
+}
+.tatico-statusbar .tsb-min-icon {
+  display: none;
+}
+.tatico-statusbar.is-minimized .tsb-min-icon {
+  display: block;
+  font-size: 14px;
+}
+
+/* Matriz de Posicionamento */
+.tsb-pos-bottom-center { bottom: 20px; left: 50%; transform: translateX(-50%); }
+.tsb-pos-bottom-start { bottom: 20px; left: 20px; }
+.tsb-pos-bottom-end { bottom: 20px; right: 20px; }
+.tsb-pos-top-center { top: 20px; left: 50%; transform: translateX(-50%); }
+.tsb-pos-top-start { top: 20px; left: 20px; }
+.tsb-pos-top-end { top: 20px; right: 20px; }
+.tsb-pos-left-center { left: 20px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+.tsb-pos-left-start { left: 20px; top: 20px; flex-direction: column; }
+.tsb-pos-left-end { left: 20px; bottom: 20px; flex-direction: column; }
+.tsb-pos-right-center { right: 20px; top: 50%; transform: translateY(-50%); flex-direction: column; }
+.tsb-pos-right-start { right: 20px; top: 20px; flex-direction: column; }
+.tsb-pos-right-end { right: 20px; bottom: 20px; flex-direction: column; }
+
+/* Controles Base */
+.tsb-btn {
+  background: var(--bg-secondary, #3b3b3b);
+  border: 1px solid var(--border-color, #555);
+  color: inherit;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+.tsb-btn:hover {
+  background: var(--bg-hover, #4b4b4b);
+}
+.tsb-label { white-space: nowrap; font-weight: 500; }
+.tsb-status-icon.done { color: #28a745; font-weight: bold; }
+.tsb-status-icon.error { color: #dc3545; font-weight: bold; }
+.tsb-status-icon.loading { color: #ffc107; font-weight: bold; }

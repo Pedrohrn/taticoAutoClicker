@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8">
   <title>Controle - Tatico</title>
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/components.css">
   <style>
-    /* sobreponho a formatacao global flex que estica e quebra a box limitante do popup da extensao */
     body {
       display: block;
       width: 250px;
@@ -16,38 +14,40 @@
       margin: 0;
       background-color: var(--sidebar-bg);
     }
-
-    .header {
-      text-align: center;
-      margin-bottom: 15px;
-    }
-
-    .header img {
-      max-width: 120px;
-      height: auto;
-    }
-
-    .status-container {
-      text-align: center;
-      font-size: 13px;
-      font-weight: bold;
-      margin-bottom: 15px;
+    .header { text-align: center; margin-bottom: 15px; }
+    .header img { max-width: 120px; height: auto; }
+    
+    .status-box {
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: var(--bg-secondary);
       color: var(--text-main);
     }
+    .status-title { font-size: 12px; margin-bottom: 8px; font-weight: bold; }
+    .btn-block { width: 100%; margin-bottom: 8px; }
   </style>
 </head>
-
 <body>
   <div class="header">
     <img src="logo.png" alt="Tatico">
   </div>
-  <div class="status-container" id="textoStatus">Status: Verificando...</div>
 
-  <button id="btnToggle" class="btn btn-success" style="width: 100%; margin-bottom: 10px;">Iniciar Revolver</button>
-  <button id="btnOpcoes" class="btn btn-info" style="width: 100%; margin-bottom: 20px;">Configurações</button>
+  <div class="status-box">
+    <div class="status-title">AutoClicker: <span id="textoRotinaAtual">Nenhuma</span></div>
+    <button id="btnToggleAutoClicker" class="btn btn-secondary btn-block">Pausar AutoClicker</button>
+  </div>
 
-  <div id="btnToggleTheme" class="theme-switch"
-    style="border-top: 1px solid var(--border-color); padding-top: 15px; margin: 0;">
+  <div class="status-box">
+    <div class="status-title">Revolver: <span id="textoStatusRevolver" style="font-weight:normal;">Verificando...</span></div>
+    <button id="btnToggleRevolver" class="btn btn-success btn-block">Iniciar Revolver</button>
+  </div>
+
+  <button id="btnToggleStatusBar" class="btn btn-warning btn-block" style="margin-top: 5px;">Ocultar Barra de Status UI</button>
+  <button id="btnOpcoes" class="btn btn-info btn-block" style="margin-bottom: 15px;">Configurações</button>
+
+  <div id="btnToggleTheme" class="theme-switch" style="border-top: 1px solid var(--border-color); padding-top: 15px; margin: 0;">
     <span>Light</span>
     <div class="theme-switch-pill"></div>
     <span>Dark</span>
@@ -55,5 +55,4 @@
 
   <script src="popup.js"></script>
 </body>
-
 </html>
