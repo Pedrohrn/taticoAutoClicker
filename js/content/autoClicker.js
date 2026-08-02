@@ -66,9 +66,10 @@ async function executarRotinaAvancada(rotina) {
   let qtdeExecutado = 0;
   let refreshTimer = null;
 
-  if (rotina.autorefresh_ativo && (rotina.autorefresh_min > 0 || rotina.autorefresh_seg > 0)) {
+  if (rotina.autorefresh && (rotina.autorefresh_min > 0 || rotina.autorefresh_seg > 0)) {
     const timeMs = ((rotina.autorefresh_min || 0) * 60 + (rotina.autorefresh_seg || 0)) * 1000;
-    refreshTimer = setTimeout(() => { location.reload(); }, timeMs);
+    console.log(`A página será automáticamente recarregada em ${rotina.autorefresh_min}:${rotina.autorefresh_seg} `)
+    refreshTimer = setTimeout(() => { console.log("recarregando página"); location.reload(); }, timeMs);
   }
 
   while (!abortar && (rotina.loop || qtdeExecutado < (rotina.qtde_execucoes || 1))) {
@@ -141,7 +142,7 @@ async function executarRotinaAvancada(rotina) {
     qtdeExecutado++;
   }
 
-  if (refreshTimer) clearTimeout(refreshTimer);
+  // if (refreshTimer) clearTimeout(refreshTimer);
 
   if (rotina.acionar_revolver && rotina.revolver_playlist_id && !abortar) {
     console.log('Rotina concluida. Acionando Auto Tab Revolver...');

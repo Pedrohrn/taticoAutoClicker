@@ -115,7 +115,7 @@ export function initRoutines() {
       qtde_execucoes: 1,
       usa_parada: false,
       condicao_parada: { tipo: 'css', valor_seletor: '' },
-      autorefresh_ativo: false,
+      autorefresh: false,
       autorefresh_min: 0,
       autorefresh_seg: 0,
       acionar_revolver: false,
@@ -141,6 +141,9 @@ export function initRoutines() {
   document.getElementById('rotinaAcionaRevolver').addEventListener('change', (e) => {
     document.getElementById('containerRotinaRevolver').style.display = e.target.checked ? 'inline-flex' : 'none';
   });
+  document.getElementById('rotinaAutoRefresh').addEventListener('change', (e) => {
+    document.getElementById('containerRotinaAutoRefreshTimeout').style.display = e.target.checked ? 'inline-flex' : 'none';
+  });
 
   function atualizarComboboxPlaylists(idSelecionado) {
     const sel = document.getElementById('rotinaRevolverPlaylist');
@@ -163,10 +166,8 @@ export function initRoutines() {
     document.getElementById('rotinaUsaParada').checked = r.usa_parada || false;
     document.getElementById('rotinaParadaTipo').value = r.condicao_parada?.tipo || 'css';
     document.getElementById('rotinaParadaValor').value = r.condicao_parada?.valor_seletor || '';
-
-    // garanto mapeamento do estado do checkbox de auto-refresh no form
-    const chkAutoRef = document.getElementById('rotinaAutoRefAtivo');
-    if (chkAutoRef) chkAutoRef.checked = r.autorefresh_ativo || false;
+    
+    document.getElementById('rotinaAutoRefresh').checked = r.autorefresh || false;
     document.getElementById('rotinaAutoRefMin').value = r.autorefresh_min || 0;
     document.getElementById('rotinaAutoRefSeg').value = r.autorefresh_seg || 0;
 
@@ -180,6 +181,7 @@ export function initRoutines() {
 
     document.querySelector(`input[name="rotinaTipo"]:checked`).dispatchEvent(new Event('change'));
     document.getElementById('rotinaUsaParada').dispatchEvent(new Event('change'));
+    document.getElementById('rotinaAutoRefresh').dispatchEvent(new Event('change'));
     document.getElementById('rotinaAcionaRevolver').dispatchEvent(new Event('change'));
 
     viewLista.classList.add('hidden');
@@ -343,8 +345,7 @@ export function initRoutines() {
     r.condicao_parada.tipo = document.getElementById('rotinaParadaTipo').value;
     r.condicao_parada.valor_seletor = document.getElementById('rotinaParadaValor').value;
 
-    const chkAutoRef = document.getElementById('rotinaAutoRefAtivo');
-    r.autorefresh_ativo = chkAutoRef ? chkAutoRef.checked : false;
+    r.autorefresh = document.getElementById('rotinaAutoRefresh').checked;
     r.autorefresh_min = parseInt(document.getElementById('rotinaAutoRefMin').value, 10) || 0;
     r.autorefresh_seg = parseInt(document.getElementById('rotinaAutoRefSeg').value, 10) || 0;
 
