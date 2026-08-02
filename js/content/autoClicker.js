@@ -1,3 +1,37 @@
+// function capturarElementoPorTexto(textoProcurado) {
+//   const regex = new RegExp(textoProcurado, 'i');
+
+//   const elementos = document.querySelectorAll('body *');
+//   let elementoAlvo = null;
+
+//   for (let el of elementos) {
+//     if (regex.test(el.textContent) && ![...el.children].some(child => regex.test(child.textContent))) {
+//       elementoAlvo = el;
+//       break;
+//     }
+//   }
+
+//   if (!elementoAlvo) return null;
+
+//   const ehClicavel = (el) => {
+//     const tagsClicaveis = ['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA'];
+//     return tagsClicaveis.includes(el.tagName) ||
+//       el.hasAttribute('onclick') ||
+//       el.getAttribute('role') === 'button' ||
+//       window.getComputedStyle(el).cursor === 'pointer';
+//   };
+
+//   let atual = elementoAlvo;
+//   while (atual && atual !== document.body) {
+//     if (ehClicavel(atual)) {
+//       return atual;
+//     }
+//     atual = atual.parentElement;
+//   }
+
+//   return elementoAlvo;
+// }
+
 function encontrarElemento(tipo, seletor) {
   if (!seletor) return null;
   try {
@@ -9,6 +43,7 @@ function encontrarElemento(tipo, seletor) {
     }
     if (tipo === 'text') {
       const todos = document.querySelectorAll('*');
+
       for (let el of todos) {
         if (el.textContent.trim() === seletor) return el;
       }
