@@ -59,15 +59,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // bindings de configuracoes da barra de status
   const selectStatusBarPos = document.getElementById('configStatusBarPos');
-  if (selectStatusBarPos) {
+  const selectStatusBarAlign = document.getElementById('configStatusBarAlign');
+
+  if (selectStatusBarPos && selectStatusBarAlign) {
     chrome.storage.local.get(['statusBarPos'], (res) => {
-      if (res.statusBarPos) selectStatusBarPos.value = res.statusBarPos;
+      const val = res.statusBarPos || 'bottom-center';
+      if (val === 'custom') {
+        selectStatusBarPos.value = 'custom';
+        selectStatusBarAlign.disabled = true;
+      } else {
+        const parts = val.split('-');
+        selectStatusBarPos.value = parts[0] || 'bottom';
+        selectStatusBarAlign.value = parts[1] || 'center';
+        selectStatusBarAlign.disabled = false;
+      }
     });
-    selectStatusBarPos.addEventListener('change', (e) => {
-      chrome.storage.local.set({ statusBarPos: e.target.value });
-    });
+
+    // compondo a string do db ao salvar, ou travando se for customizada
+    const salvarPosicao = () => {
+      if (selectStatusBarPos.value === 'custom') {
+        selectStatusBarAlign.disabled = true;
+        chrome.storage.local.set({ statusBarPos: 'custom' });
+      } else {
+        selectStatusBarAlign.disabled = false;
+        chrome.storage.local.set({ statusBarPos: `${selectStatusBarPos.value}-${selectStatusBarAlign.value}` });
+      }
+    };
+
+    selectStatusBarPos.addEventListener('change', salvarPosicao);
+    selectStatusBarAlign.addEventListener('change', salvarPosicao);
   }
 
   const checkStatusBarAtiva = document.getElementById('configStatusBarAtiva');

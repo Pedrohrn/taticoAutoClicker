@@ -261,20 +261,21 @@
         </label>
       </div>
       <div class="form-group">
-        <label>Posição da Barra de Status na Injeção da Tela:</label>
-        <select id="configStatusBarPos" style="max-width: 300px; padding: 5px;">
-          <option value="bottom-center">Inferior - Centro</option>
-          <option value="bottom-start">Inferior - Esquerda</option>
-          <option value="bottom-end">Inferior - Direita</option>
-          <option value="top-center">Superior - Centro</option>
-          <option value="top-start">Superior - Esquerda</option>
-          <option value="top-end">Superior - Direita</option>
-          <option value="left-center">Lateral Esquerda - Centro</option>
-          <option value="left-start">Lateral Esquerda - Topo</option>
-          <option value="left-end">Lateral Esquerda - Base</option>
-          <option value="right-center">Lateral Direita - Centro</option>
-          <option value="right-start">Lateral Direita - Topo</option>
-          <option value="right-end">Lateral Direita - Base</option>
+        <label>Posição da Barra:</label>
+        <select id="configStatusBarPos">
+          <option value="bottom">Baixo</option>
+          <option value="top">Cima</option>
+          <option value="left">Esquerda</option>
+          <option value="right">Direita</option>
+          <option value="custom">Personalizada</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Alinhamento:</label>
+        <select id="configStatusBarAlign">
+          <option value="center">Centro</option>
+          <option value="left">Início (Esquerda/Cima)</option>
+          <option value="right">Fim (Direita/Baixo)</option>
         </select>
       </div>
     </div>
