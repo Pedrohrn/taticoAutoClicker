@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnToggleAutoClicker = document.getElementById('btnToggleAutoClicker');
   const btnToggleStatusBar = document.getElementById('btnToggleStatusBar');
   const btnOpcoes = document.getElementById('btnOpcoes');
-  
+
   const textoStatusRevolver = document.getElementById('textoStatusRevolver');
   const textoRotinaAtual = document.getElementById('textoRotinaAtual');
 
@@ -39,10 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (estado.statusBarClosed !== undefined) {
       if (estado.statusBarClosed) {
         btnToggleStatusBar.textContent = "Exibir Barra de Status UI";
-        btnToggleStatusBar.className = "btn btn-success btn-block";
+        // refact: uso btn-info para contrastar melhor ao inves de warning
+        btnToggleStatusBar.className = "btn btn-info btn-block";
       } else {
         btnToggleStatusBar.textContent = "Ocultar Barra de Status UI";
-        btnToggleStatusBar.className = "btn btn-warning btn-block";
+        btnToggleStatusBar.className = "btn btn-secondary btn-block";
       }
     }
   }
