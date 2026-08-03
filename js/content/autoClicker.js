@@ -1,8 +1,9 @@
-// modulo isolado da ui injetavel
 class TaticoStatusBarUI {
   constructor() {
     this.elemento = null;
     this.posicao = 'bottom-center';
+    this.coords = null;
+    this.isDragging = false;
     this.estado = {
       fechada: false,
       minimizada: false,
@@ -17,9 +18,10 @@ class TaticoStatusBarUI {
 
   async inicializar(nomeRotinaAtiva) {
     chrome.storage.local.set({ rotinaAtualNome: nomeRotinaAtiva || "Ativa" });
-    const res = await chrome.storage.local.get(['statusBarPos', 'statusBarMinimized', 'statusBarClosed', 'autoClickerPaused', 'revolverAtivo']);
+    const res = await chrome.storage.local.get(['statusBarPos', 'statusBarCoords', 'statusBarMinimized', 'statusBarClosed', 'autoClickerPaused', 'revolverAtivo']);
 
     this.posicao = res.statusBarPos || 'bottom-center';
+    this.coords = res.statusBarCoords || null;
     this.estado.minimizada = !!res.statusBarMinimized;
     this.estado.fechada = !!res.statusBarClosed;
     this.estado.autoClickerPaused = !!res.autoClickerPaused;
@@ -32,12 +34,25 @@ class TaticoStatusBarUI {
   construirDOM() {
     if (document.getElementById('tatico-statusbar-inj')) return;
 
+    // injeto estilos base de controle pro arraste e layout dinamico sem encostar nos globais
+    if (!document.getElementById('tatico-statusbar-inj-style')) {
+      const style = document.createElement('style');
+      style.id = 'tatico-statusbar-inj-style';
+      style.textContent = `
+        .tsb-drag-handle { cursor: grab; padding: 0 8px; font-size: 16px; user-select: none; display: flex; align-items: center; justify-content: center; }
+        .tsb-drag-handle:active { cursor: grabbing; }
+        .tatico-statusbar.tsb-vertical .tsb-content { flex-direction: column; }
+        .tatico-statusbar.tsb-vertical .tsb-drag-handle { padding: 8px 0; transform: rotate(90deg); }
+        .tatico-statusbar.is-custom { bottom: auto !important; right: auto !important; transform: none !important; margin: 0 !important; }
+      `;
+      document.head.appendChild(style);
+    }
+
     this.elemento = document.createElement('div');
     this.elemento.id = 'tatico-statusbar-inj';
     document.body.appendChild(this.elemento);
 
     this.elemento.addEventListener('click', (e) => {
-      // expando ao clicar na seta quando minimizado
       if (this.estado.minimizada && e.target.closest('.tsb-min-icon')) {
         this.estado.minimizada = false;
         chrome.storage.local.set({ statusBarMinimized: false });
@@ -49,13 +64,10 @@ class TaticoStatusBarUI {
   }
 
   renderizarConteudo() {
-    if (!this.elemento) return;
+    if (!this.elemento || this.isDragging) return;
 
-    this.elemento.className = `tatico-statusbar tsb-pos-${this.posicao}`;
-
-    // garanto o desaparecimento forcado manipulando o display em caso de quebra no css
     if (this.estado.fechada) {
-      this.elemento.classList.add('is-closed');
+      this.elemento.className = 'tatico-statusbar is-closed';
       this.elemento.style.display = 'none';
       return;
     } else {
@@ -63,40 +75,68 @@ class TaticoStatusBarUI {
     }
 
     if (this.estado.minimizada) {
-      this.elemento.classList.add('is-minimized');
+      this.elemento.className = 'tatico-statusbar is-minimized';
+      this.aplicarPosicaoECoordenadas();
       this.elemento.innerHTML = `<div class="tsb-min-icon" title="Expandir Tatico">\u25B2</div>`;
       return;
     }
 
-    this.elemento.classList.remove('is-minimized');
-
-    const iconStatusMap = {
-      'done': '<span class="tsb-status-icon done">\u2713</span>',
-      'error': '<span class="tsb-status-icon error">\u2715</span>',
-      'loading': '<span class="tsb-status-icon loading">?</span>'
-    };
-
     this.elemento.innerHTML = `
       <div class="tsb-content">
-        <span class="tsb-label">Passo ${this.estado.passoAtual}/${this.estado.passoTotal} ${iconStatusMap[this.estado.statusPasso] || iconStatusMap['loading']}</span>
-
+        <div class="tsb-drag-handle" title="Arraste para mover a barra">\u2630</div>
+        <span class="tsb-label tsb-label-passo"></span>
         <button id="tsb-btn-ac" class="tsb-btn" title="Alternar AutoClicker">
           ${this.estado.autoClickerPaused ? '\u25B6 AC' : '\u23F8 AC'}
         </button>
-
         <button id="tsb-btn-rev" class="tsb-btn" title="Alternar Revolver">
           ${this.estado.revolverAtivo ? '\u23F8 REV' : '\u25B6 REV'}
         </button>
-
-        ${this.estado.tempoRefreshTexto ? `<span class="tsb-label">\u23F2 ${this.estado.tempoRefreshTexto}</span>` : ''}
-
+        <span class="tsb-label tsb-label-tempo"></span>
         <button id="tsb-btn-conf" class="tsb-btn" title="Configurações">\u2699</button>
         <button id="tsb-btn-min" class="tsb-btn" title="Minimizar">\u25BC</button>
         <button id="tsb-btn-close" class="tsb-btn" title="Fechar (Reabrir via Popup)">\u2715</button>
       </div>
     `;
 
+    this.aplicarPosicaoECoordenadas();
+    this.atualizarApenasValores();
     this.bindEventosInternos();
+  }
+
+  aplicarPosicaoECoordenadas() {
+    if (this.posicao === 'custom') {
+      if (this.coords) {
+        this.elemento.style.left = `${this.coords.x}px`;
+        this.elemento.style.top = `${this.coords.y}px`;
+        this.elemento.style.bottom = 'auto';
+        this.elemento.style.right = 'auto';
+        this.elemento.style.transform = 'none';
+
+        this.elemento.className = 'tatico-statusbar is-custom';
+        if (this.estado.minimizada) this.elemento.classList.add('is-minimized');
+
+        // ajustando a espelhagem visual para nao quebrar em cantos apertados
+        const isNearEdge = this.coords.x < 50 || this.coords.x + this.elemento.offsetWidth > window.innerWidth - 50;
+        if (isNearEdge && !this.estado.minimizada) {
+          this.elemento.classList.add('tsb-vertical');
+        }
+      } else {
+        // defino estado temporario baseado em calculo pra extrair default e gravar
+        this.elemento.className = 'tatico-statusbar tsb-pos-bottom-center';
+        const rect = this.elemento.getBoundingClientRect();
+        this.coords = { x: rect.left, y: rect.top };
+        this.aplicarPosicaoECoordenadas();
+      }
+    } else {
+      this.elemento.style.left = '';
+      this.elemento.style.top = '';
+      this.elemento.style.bottom = '';
+      this.elemento.style.right = '';
+      this.elemento.style.transform = '';
+
+      this.elemento.className = `tatico-statusbar tsb-pos-${this.posicao}`;
+      if (this.estado.minimizada) this.elemento.classList.add('is-minimized');
+    }
   }
 
   bindEventosInternos() {
@@ -123,34 +163,139 @@ class TaticoStatusBarUI {
       chrome.storage.local.set({ statusBarClosed: true });
       this.renderizarConteudo();
     });
+
+    const handle = this.elemento.querySelector('.tsb-drag-handle');
+    if (handle) {
+      handle.addEventListener('mousedown', this.iniciarArraste.bind(this));
+    }
+  }
+
+  // injeto manipuladores de drag para arrastar solto pelo viewport
+  iniciarArraste(e) {
+    this.isDragging = true;
+    this.startX = e.clientX;
+    this.startY = e.clientY;
+
+    const rect = this.elemento.getBoundingClientRect();
+    this.initialX = rect.left;
+    this.initialY = rect.top;
+
+    this.elemento.className = 'tatico-statusbar is-custom';
+    this.elemento.style.bottom = 'auto';
+    this.elemento.style.right = 'auto';
+    this.elemento.style.transform = 'none';
+
+    this.onMouseMove = this.arrastar.bind(this);
+    this.onMouseUp = this.pararArraste.bind(this);
+
+    document.addEventListener('mousemove', this.onMouseMove);
+    document.addEventListener('mouseup', this.onMouseUp);
+  }
+
+  arrastar(e) {
+    if (!this.isDragging) return;
+
+    let newX = this.initialX + (e.clientX - this.startX);
+    let newY = this.initialY + (e.clientY - this.startY);
+
+    if (newX < 0) newX = 0;
+    if (newY < 0) newY = 0;
+
+    // auto alterno a orientacao do flex para evitar clipes na horizontal nas bordas
+    const isVertical = newX < 50 || newX + this.elemento.offsetWidth > window.innerWidth - 50;
+    if (isVertical) {
+      this.elemento.classList.add('tsb-vertical');
+    } else {
+      this.elemento.classList.remove('tsb-vertical');
+    }
+
+    const rect = this.elemento.getBoundingClientRect();
+    if (newX + rect.width > window.innerWidth) newX = window.innerWidth - rect.width;
+    if (newY + rect.height > window.innerHeight) newY = window.innerHeight - rect.height;
+
+    this.elemento.style.left = `${newX}px`;
+    this.elemento.style.top = `${newY}px`;
+  }
+
+  pararArraste() {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+    document.removeEventListener('mousemove', this.onMouseMove);
+    document.removeEventListener('mouseup', this.onMouseUp);
+
+    const rect = this.elemento.getBoundingClientRect();
+    const updatedCoords = { x: rect.left, y: rect.top };
+
+    this.coords = updatedCoords;
+    this.posicao = 'custom';
+
+    // defino no storage local pra preencher na aba configuracoes de forma passiva
+    chrome.storage.local.set({
+      statusBarPos: 'custom',
+      statusBarCoords: updatedCoords
+    });
   }
 
   escutarAlteracoesStorage() {
     chrome.storage.onChanged.addListener((changes, namespace) => {
       if (namespace === 'local') {
         let mudouUi = false;
-        if (changes.statusBarPos) { this.posicao = changes.statusBarPos.newValue; mudouUi = true; }
-        if (changes.statusBarMinimized) { this.estado.minimizada = !!changes.statusBarMinimized.newValue; mudouUi = true; }
-        if (changes.statusBarClosed) { this.estado.fechada = !!changes.statusBarClosed.newValue; mudouUi = true; }
-        if (changes.autoClickerPaused) { this.estado.autoClickerPaused = !!changes.autoClickerPaused.newValue; mudouUi = true; }
-        if (changes.revolverAtivo) { this.estado.revolverAtivo = !!changes.revolverAtivo.newValue; mudouUi = true; }
+
+        if (changes.statusBarPos && changes.statusBarPos.newValue !== this.posicao) {
+          this.posicao = changes.statusBarPos.newValue; mudouUi = true;
+        }
+        if (changes.statusBarCoords) {
+          this.coords = changes.statusBarCoords.newValue; mudouUi = true;
+        }
+        if (changes.statusBarMinimized) {
+          this.estado.minimizada = !!changes.statusBarMinimized.newValue; mudouUi = true;
+        }
+        if (changes.statusBarClosed) {
+          this.estado.fechada = !!changes.statusBarClosed.newValue; mudouUi = true;
+        }
+        if (changes.autoClickerPaused) {
+          this.estado.autoClickerPaused = !!changes.autoClickerPaused.newValue; mudouUi = true;
+        }
+        if (changes.revolverAtivo) {
+          this.estado.revolverAtivo = !!changes.revolverAtivo.newValue; mudouUi = true;
+        }
 
         if (mudouUi) this.renderizarConteudo();
       }
     });
   }
 
+  // manipulo somentes os nodes textuais pra evitar re-render no innerHTML em pleno processo
+  atualizarApenasValores() {
+    if (!this.elemento || this.isDragging) return;
+
+    const lblPasso = this.elemento.querySelector('.tsb-label-passo');
+    if (lblPasso) {
+      const iconStatusMap = {
+        'done': '<span class="tsb-status-icon done">\u2713</span>',
+        'error': '<span class="tsb-status-icon error">\u2715</span>',
+        'loading': '<span class="tsb-status-icon loading">?</span>'
+      };
+      lblPasso.innerHTML = `Passo ${this.estado.passoAtual}/${this.estado.passoTotal} ${iconStatusMap[this.estado.statusPasso] || iconStatusMap['loading']}`;
+    }
+
+    const lblTempo = this.elemento.querySelector('.tsb-label-tempo');
+    if (lblTempo) {
+      lblTempo.innerHTML = this.estado.tempoRefreshTexto ? `\u23F2 ${this.estado.tempoRefreshTexto}` : '';
+    }
+  }
+
   atualizarProgresso(atual, total, status) {
     this.estado.passoAtual = atual;
     this.estado.passoTotal = total;
     this.estado.statusPasso = status;
-    this.renderizarConteudo();
+    this.atualizarApenasValores();
   }
 
   atualizarTimerUI(texto) {
     if (this.estado.tempoRefreshTexto !== texto) {
       this.estado.tempoRefreshTexto = texto;
-      this.renderizarConteudo();
+      this.atualizarApenasValores();
     }
   }
 }
@@ -202,7 +347,6 @@ async function executarRotinaAvancada(rotina) {
     console.log(`A página será automáticamente recarregada em ${rotina.autorefresh_min}:${rotina.autorefresh_seg}`);
     refreshTimer = setTimeout(() => { location.reload(); }, timeMs);
 
-    // disparo periodico atualizando a badge no content script e UI injetavel
     let counterMs = timeMs;
     setInterval(() => {
       if (counterMs > 0 && !window.taticoUI.estado.autoClickerPaused) {
@@ -311,7 +455,6 @@ async function executarRotinaAvancada(rotina) {
 async function iniciarFilaRotinasSimples(rotina) {
   const cfg = rotina.config_simples;
 
-  // mocko passo simples pra ui injetavel
   window.taticoUI.atualizarProgresso(1, 1, 'loading');
 
   const intervalo = setInterval(async () => {
@@ -365,7 +508,6 @@ window.addEventListener('load', () => {
     const rotinasDoPerfil = rotinas.filter(r => r.perfil_id === perfilAtivo.id && r.ativa);
 
     if (rotinasDoPerfil.length > 0) {
-      // inicio a ui centralizada passando a primeira rotina para track
       window.taticoUI.inicializar(rotinasDoPerfil[0].nome);
 
       rotinasDoPerfil.forEach(rotina => {
