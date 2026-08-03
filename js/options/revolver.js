@@ -59,7 +59,6 @@ export function initRevolver() {
     const p = playlistsSalvas.find(x => x.id === id);
     document.getElementById('inputNomePlaylist').value = p.nome;
 
-    // reseto o chk select all
     const chkSelectAll = document.getElementById('chkSelectAll');
     if (chkSelectAll) chkSelectAll.checked = false;
 
@@ -123,13 +122,12 @@ export function initRevolver() {
     }));
   }
 
-  // trago de volta a interacao para injetar dinamicamente e compor uma playlist da arvore de tabs
   document.getElementById('btnCapturarJanela').addEventListener('click', () => {
     chrome.tabs.query({ currentWindow: true }, (tabs) => {
       sincronizarDom();
       const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
       tabs.forEach(tab => {
-        if (tab.url && !tab.url.startsWith('chrome://')) {
+        if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('edge://')) {
           pl.itens.push({
             url: tab.url,
             minutos: 0,
@@ -190,7 +188,6 @@ export function initRevolver() {
     });
   });
 
-  // evento do storage para atualizar a table de playlists realtime se rodando/parada via popup
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && (changes.revolverAtivo || changes.playlistIdAtiva)) {
       if (document.getElementById('listaPlaylistsContainer').classList.contains('hidden') === false) {

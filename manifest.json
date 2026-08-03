@@ -24,8 +24,15 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*/*"],
-      "js": ["js/content/autoClicker.js"],
+      "matches": [
+        "*://*/*"
+      ],
+      "css": [
+        "css/components.css"
+      ],
+      "js": [
+        "js/content/autoClicker.js"
+      ],
       "run_at": "document_end"
     }
   ],

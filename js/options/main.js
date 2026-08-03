@@ -5,11 +5,12 @@ import { initStorage } from './storage.js';
 
 // garanto o estado inicial do sistema caso seja a primeira instalacao
 function garantirEstadoInicial() {
-  chrome.storage.local.get(['perfis', 'rotinas', 'playlists'], (data) => {
+  chrome.storage.local.get(['perfis', 'rotinas', 'playlists', 'statusBarClosed'], (data) => {
     const estado = {};
     if (!data.perfis) estado.perfis = [];
     if (!data.rotinas) estado.rotinas = [];
     if (!data.playlists) estado.playlists = [];
+    if (data.statusBarClosed === undefined) estado.statusBarClosed = false;
 
     if (Object.keys(estado).length > 0) {
       chrome.storage.local.set(estado);
@@ -20,22 +21,19 @@ function garantirEstadoInicial() {
 document.addEventListener('DOMContentLoaded', () => {
   garantirEstadoInicial();
 
-  // mapeio botoes e submenus respeitando o estado ativo e parentesco no menu
   const navGroupTitles = document.querySelectorAll('.nav-group-title');
-  const navBtns = document.querySelectorAll('.nav-btn.sub-btn, .nav-group-title[data-target]');
+  const navBtns = document.querySelectorAll('.nav-btn.sub-btn, .nav-group-title[data-target], .sidebar > .nav-btn[data-target]');
   const tabContents = document.querySelectorAll('.tab-content');
 
   navGroupTitles.forEach(title => {
     title.addEventListener('click', () => {
       const group = title.closest('.nav-group');
       if (group) group.classList.toggle('open');
-
       if (title.dataset.target) ativarMenu(title);
     });
   });
 
   navBtns.forEach(btn => {
-    // anulo propagacao nos nav-group-titles pois ja sao tratados acima
     if (btn.classList.contains('nav-group-title')) return;
     btn.addEventListener('click', () => ativarMenu(btn));
   });
@@ -61,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // bindings de configuracoes da barra de status
   const selectStatusBarPos = document.getElementById('configStatusBarPos');
   if (selectStatusBarPos) {
     chrome.storage.local.get(['statusBarPos'], (res) => {
@@ -68,6 +67,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     selectStatusBarPos.addEventListener('change', (e) => {
       chrome.storage.local.set({ statusBarPos: e.target.value });
+    });
+  }
+
+  const checkStatusBarAtiva = document.getElementById('configStatusBarAtiva');
+  if (checkStatusBarAtiva) {
+    chrome.storage.local.get(['statusBarClosed'], (res) => {
+      checkStatusBarAtiva.checked = !res.statusBarClosed;
+    });
+    checkStatusBarAtiva.addEventListener('change', (e) => {
+      chrome.storage.local.set({ statusBarClosed: !e.target.checked });
     });
   }
 

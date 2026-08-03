@@ -18,7 +18,7 @@ class TaticoStatusBarUI {
   async inicializar(nomeRotinaAtiva) {
     chrome.storage.local.set({ rotinaAtualNome: nomeRotinaAtiva || "Ativa" });
     const res = await chrome.storage.local.get(['statusBarPos', 'statusBarMinimized', 'statusBarClosed', 'autoClickerPaused', 'revolverAtivo']);
-    
+
     this.posicao = res.statusBarPos || 'bottom-center';
     this.estado.minimizada = !!res.statusBarMinimized;
     this.estado.fechada = !!res.statusBarClosed;
@@ -50,10 +50,25 @@ class TaticoStatusBarUI {
 
   renderizarConteudo() {
     if (!this.elemento) return;
-    
+
     this.elemento.className = `tatico-statusbar tsb-pos-${this.posicao}`;
-    if (this.estado.fechada) this.elemento.classList.add('is-closed');
-    if (this.estado.minimizada) this.elemento.classList.add('is-minimized');
+
+    // garanto o desaparecimento forcado manipulando o display em caso de quebra no css
+    if (this.estado.fechada) {
+      this.elemento.classList.add('is-closed');
+      this.elemento.style.display = 'none';
+      return;
+    } else {
+      this.elemento.style.display = '';
+    }
+
+    if (this.estado.minimizada) {
+      this.elemento.classList.add('is-minimized');
+      this.elemento.innerHTML = `<div class="tsb-min-icon" title="Expandir Tatico">\u25B2</div>`;
+      return;
+    }
+
+    this.elemento.classList.remove('is-minimized');
 
     const iconStatusMap = {
       'done': '<span class="tsb-status-icon done">\u2713</span>',
@@ -61,25 +76,20 @@ class TaticoStatusBarUI {
       'loading': '<span class="tsb-status-icon loading">?</span>'
     };
 
-    if (this.estado.minimizada) {
-      this.elemento.innerHTML = `<div class="tsb-min-icon" title="Expandir Tatico">\u25B2</div>`;
-      return;
-    }
-
     this.elemento.innerHTML = `
       <div class="tsb-content">
         <span class="tsb-label">Passo ${this.estado.passoAtual}/${this.estado.passoTotal} ${iconStatusMap[this.estado.statusPasso] || iconStatusMap['loading']}</span>
-        
+
         <button id="tsb-btn-ac" class="tsb-btn" title="Alternar AutoClicker">
           ${this.estado.autoClickerPaused ? '\u25B6 AC' : '\u23F8 AC'}
         </button>
-        
+
         <button id="tsb-btn-rev" class="tsb-btn" title="Alternar Revolver">
           ${this.estado.revolverAtivo ? '\u23F8 REV' : '\u25B6 REV'}
         </button>
-        
+
         ${this.estado.tempoRefreshTexto ? `<span class="tsb-label">\u23F2 ${this.estado.tempoRefreshTexto}</span>` : ''}
-        
+
         <button id="tsb-btn-conf" class="tsb-btn" title="Configurações">\u2699</button>
         <button id="tsb-btn-min" class="tsb-btn" title="Minimizar">\u25BC</button>
         <button id="tsb-btn-close" class="tsb-btn" title="Fechar (Reabrir via Popup)">\u2715</button>
@@ -93,21 +103,21 @@ class TaticoStatusBarUI {
     document.getElementById('tsb-btn-ac')?.addEventListener('click', () => {
       chrome.storage.local.set({ autoClickerPaused: !this.estado.autoClickerPaused });
     });
-    
+
     document.getElementById('tsb-btn-rev')?.addEventListener('click', () => {
       chrome.storage.local.set({ revolverAtivo: !this.estado.revolverAtivo });
     });
-    
+
     document.getElementById('tsb-btn-conf')?.addEventListener('click', () => {
       chrome.runtime.sendMessage({ action: "openOptions" });
     });
-    
+
     document.getElementById('tsb-btn-min')?.addEventListener('click', () => {
       this.estado.minimizada = true;
       chrome.storage.local.set({ statusBarMinimized: true });
       this.renderizarConteudo();
     });
-    
+
     document.getElementById('tsb-btn-close')?.addEventListener('click', () => {
       this.estado.fechada = true;
       chrome.storage.local.set({ statusBarClosed: true });
@@ -124,7 +134,7 @@ class TaticoStatusBarUI {
         if (changes.statusBarClosed) { this.estado.fechada = !!changes.statusBarClosed.newValue; mudouUi = true; }
         if (changes.autoClickerPaused) { this.estado.autoClickerPaused = !!changes.autoClickerPaused.newValue; mudouUi = true; }
         if (changes.revolverAtivo) { this.estado.revolverAtivo = !!changes.revolverAtivo.newValue; mudouUi = true; }
-        
+
         if (mudouUi) this.renderizarConteudo();
       }
     });
@@ -201,7 +211,7 @@ async function executarRotinaAvancada(rotina) {
         const mm = Math.floor(counterMs / 60000);
         const ss = Math.floor((counterMs % 60000) / 1000);
         const txt = `${mm}:${ss.toString().padStart(2, '0')}`;
-        
+
         window.taticoUI.atualizarTimerUI(txt);
         chrome.runtime.sendMessage({ action: "updateBadge", text: txt });
       }
@@ -300,7 +310,7 @@ async function executarRotinaAvancada(rotina) {
 
 async function iniciarFilaRotinasSimples(rotina) {
   const cfg = rotina.config_simples;
-  
+
   // mocko passo simples pra ui injetavel
   window.taticoUI.atualizarProgresso(1, 1, 'loading');
 
@@ -357,7 +367,7 @@ window.addEventListener('load', () => {
     if (rotinasDoPerfil.length > 0) {
       // inicio a ui centralizada passando a primeira rotina para track
       window.taticoUI.inicializar(rotinasDoPerfil[0].nome);
-      
+
       rotinasDoPerfil.forEach(rotina => {
         if (rotina.tipo === 'simples') iniciarFilaRotinasSimples(rotina);
         else executarRotinaAvancada(rotina);
