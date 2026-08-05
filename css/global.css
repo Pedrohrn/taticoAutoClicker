@@ -1,0 +1,106 @@
+:root {
+  --tatico-red: #d11c1c;
+  --tatico-red-hover: #a31515;
+  --bg-color: #f4f4f9;
+  --sidebar-bg: #ffffff;
+  --content-bg: #ffffff;
+  --text-main: #333333;
+  --text-muted: #555555;
+  --border-color: #e0e0e0;
+  --input-bg: #ffffff;
+  --input-border: #ccc;
+  --table-header-bg: #f8f9fa;
+}
+
+/* isolo a atribuicao dark para forcar tema pelo clique */
+:root[data-theme="dark"] {
+  --tatico-red: #e74c3c;
+  --tatico-red-hover: #c0392b;
+  --bg-color: #121212;
+  --sidebar-bg: #1e1e1e;
+  --content-bg: #1e1e1e;
+  --text-main: #e0e0e0;
+  --text-muted: #aaaaaa;
+  --border-color: #333333;
+  --input-bg: #2c2c2c;
+  --input-border: #444444;
+  --table-header-bg: #2a2a2a;
+}
+
+/* faco o fallback nativo caso o usuario nao tenha setado um tema manual ainda */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tatico-red: #e74c3c;
+    --tatico-red-hover: #c0392b;
+    --bg-color: #121212;
+    --sidebar-bg: #1e1e1e;
+    --content-bg: #1e1e1e;
+    --text-main: #e0e0e0;
+    --text-muted: #aaaaaa;
+    --border-color: #333333;
+    --input-bg: #2c2c2c;
+    --input-border: #444444;
+    --table-header-bg: #2a2a2a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-color);
+  display: flex;
+  height: 100vh;
+  color: var(--text-main);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar {
+  width: 240px;
+  background-color: var(--sidebar-bg);
+  border-right: 1px solid var(--border-color);
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-logo {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 0 20px;
+}
+
+.sidebar-logo img {
+  max-width: 140px;
+  height: auto;
+}
+
+.content {
+  flex: 1;
+  padding: 30px;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.tab-content {
+  display: none;
+  width: 100%;
+  max-width: 1200px;
+  background: var(--content-bg);
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.hidden {
+  display: none !important;
+}

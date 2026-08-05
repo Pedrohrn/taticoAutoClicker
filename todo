@@ -1,0 +1,19 @@
+novidades:
+  - fallback para recarregar a pagina em caso de travamento da rotina - definir tempo (deve ser campo configuraado, padrao de 5 minutos)
+
+geral:
+  - criar config.json basico para alimentar os perfis com perfis de TV
+    - perfil TV ACOUGUE
+    - perfil TV PADARIA
+
+instalacao:
+  - criar os comandos
+    - atualizar
+    - instalar
+    - configurar
+    - pausar/rodar (chrome kiosk)
+    - reiniciar
+
+testes:
+  - windows
+  - outros navegadores (mozilla e eddge)

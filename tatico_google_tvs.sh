@@ -1,145 +1,307 @@
 #!/bin/bash
 
-# garantindo o git
-sudo apt update && sudo apt install git -y
+TK_DIR="$HOME/.tatico"
+TK_RC="$TK_DIR/bashrc_aliases"
+TK_SCRIPT="$TK_DIR/tatico_core.sh"
+REPO_RAW_URL="https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh"
 
-EXTENSIONS_DIR="$HOME/tatico_extensions"
-REPO_DIR="taticoAutoClicker"
-REPO_URL="https://github.com/Pedrohrn/taticoAutoClicker.git"
-CONFIG_DIR="$HOME/.config/tatico-chrome"
-CONFIG_FILE="$CONFIG_DIR/urls.conf"
+mkdir -p "$TK_DIR"
 
-mkdir -p "$CONFIG_DIR"
-mkdir -p "$EXTENSIONS_DIR"
 
-cd "$EXTENSIONS_DIR" || exit 1
+# MÓDULO 1: GERADOR DE COMANDOS E INTERAÇÃO
+# escrevendo as funcoes no disco de forma independente
 
-if [ -d "$REPO_DIR" ]; then
-    echo "Diretório encontrado. Atualizando o repositório..."
-    cd "$REPO_DIR" || exit 1
-    git pull
-else
-    echo "Diretório não encontrado. Clonando o repositório..."
-    git clone "$REPO_URL" "$REPO_DIR"
-    cd "$REPO_DIR" || exit 1
+cat << 'EOF' > "$TK_RC"
+# gerenciando o encerramento do terminal com contagem e interrupcao silenciosa
+function _tk_timeout() {
+    local s=15
+    echo ""
+    while [ $s -gt 0 ]; do
+        echo -ne "\rterminal fechando em $s segundos... (pressione qualquer tecla para cancelar)\033[0K"
+        if read -t 1 -n 1 -s < /dev/tty; then
+            echo -e "\nfechamento cancelado."
+            return 0
+        fi
+        ((s--))
+    done
+    echo -ne "\rterminal fechando agora.\033[0K\n"
+    kill -9 $PPID
+}
+
+# iniciando o fluxo interativo que invoca o modulo 2
+function instalar_tk() {
+    local tv_opt="" loja_opt="" tv_str="" loja_str=""
+
+    while true; do
+        read -p "Qual é o tipo de TV? (1 - Padaria, 2 - Açougue - digite somente o número): " < /dev/tty tv_opt
+        case "$tv_opt" in
+            1) tv_str="padaria"; break ;;
+            2) tv_str="acougue"; break ;;
+            *) echo "opção inválida. tente novamente." ;;
+        esac
+    done
+
+    while true; do
+        read -p "Qual é a loja? (1-CENTRO, 2-GARAVELO, 3-T7, 4-CAMPINAS, 5-PORTAL, 6-PAPILLON - digite somente o número): " < /dev/tty loja_opt
+        case "$loja_opt" in
+            1) loja_str="CENTRO"; break ;;
+            2) loja_str="GARAVELO"; break ;;
+            3) loja_str="T7"; break ;;
+            4) loja_str="CAMPINAS"; break ;;
+            5) loja_str="PORTAL"; break ;;
+            6) loja_str="PAPILLON"; break ;;
+            *) echo "opção inválida. tente novamente." ;;
+        esac
+    done
+
+    bash "$HOME/.tatico/tatico_core.sh" --acao install --tv "$tv_str" --loja "$loja_str" && _tk_timeout
+}
+
+# atualizando somente a logica de bashrc e do core, sem afetar o json/systemd
+function atualizar_comandos_tk() {
+    echo "baixando comandos mais recentes..."
+    curl -sL "https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh" | bash -s -- --only-cmds
+    source "$HOME/.tatico/bashrc_aliases"
+    echo "comandos e core atualizados com sucesso."
+    _tk_timeout
+}
+
+# chamando atualizacao dos arquivos da extensao no git
+function atualizar_tk() {
+    bash "$HOME/.tatico/tatico_core.sh" --acao update && _tk_timeout
+}
+
+# recebendo e validando flags especificas para alterar propriedades pontuais
+function configurar_tk() {
+    local tv="" loja="" link=""
+
+    while [[ "$#" -gt 0 ]]; do
+        case $1 in
+            --tipo_tv) tv="$2"; shift 2 ;;
+            --loja) loja="$2"; shift 2 ;;
+            --link) link="$2"; shift 2 ;;
+            *) echo "erro: flag desconhecida $1"; return 1 ;;
+        esac
+    done
+
+    if [ -n "$link" ] && [ -z "$tv" ]; then
+        echo "erro: ao informar --link, a flag --tipo_tv é obrigatória."
+        return 1
+    fi
+
+    bash "$HOME/.tatico/tatico_core.sh" --acao config --tv "$tv" --loja "$loja" --link "$link" && _tk_timeout
+}
+
+# parando as rotinas do systemd sem fechar os processos do navegador
+function pausar_tk() {
+    systemctl --user stop tatico-chrome.service tatico-chrome-restart.timer
+    echo "kiosk pausado (processos mantidos em execução)."
+    _tk_timeout
+}
+
+# retomando o gerenciamento do systemd
+function resumir_tk() {
+    systemctl --user start tatico-chrome.service tatico-chrome-restart.timer
+    echo "kiosk resumido com sucesso."
+    _tk_timeout
+}
+
+# limpando processos zumbis e reiniciando o servico master
+function reiniciar_tk() {
+    pkill -f "google-chrome.*taticoAutoClicker" || true
+    systemctl --user restart tatico-chrome.service
+    local pid=$(systemctl --user show -p MainPID --value tatico-chrome.service)
+    echo "kiosk reiniciado com sucesso. PID atual: $pid"
+    _tk_timeout
+}
+EOF
+
+# injetando a persistencia no bashrc do usuario local
+if ! grep -q "source $TK_RC" "$HOME/.bashrc"; then
+    echo -e "\n# Tatico AutoClicker Kiosk\nsource $TK_RC" >> "$HOME/.bashrc"
 fi
 
-# sudo chown -R "$(whoami)":"$(id -gn)" .git
+# MÓDULO 2
+# isolando o script para nao rodar desnecessariamente
 
-# criando o arquivo de configuracao com os valores padrao se for a primeira execucao
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "URL_PADARIA=\"https://app.powerbi.com/view?r=eyJrIjoiOTNkMGY3OGQtZjA0NC00MDE0LWI4N2UtN2FhZDllN2ZiNzY2IiwidCI6IjM2ODY2NjVlLTM3YjItNDBjNi05OTM1LTJkMzFkZmMwMThlNiJ9&embedImagePlaceholder=true\"" > "$CONFIG_FILE"
-    echo "URL_ACOUGUE=\"https://app.powerbi.com/view?r=eyJrIjoiYzBjNzRlNjUtY2FjOC00ZjM4LWExMDktMmU0OWE5MzY2NzQ2IiwidCI6IjM2ODY2NjVlLTM3YjItNDBjNi05OTM1LTJkMzFkZmMwMThlNiJ9&embedImagePlaceholder=true\"" >> "$CONFIG_FILE"
-    echo "NOME_LOJA=\"CAMPINAS\"" >> "$CONFIG_FILE"
+cat << 'EOF' > "$TK_SCRIPT"
+#!/bin/bash
+
+# garantindo presenca de ferramentas base
+if ! command -v git &> /dev/null || ! command -v wmctrl &> /dev/null || ! command -v python3 &> /dev/null; then
+    sudo apt-get update > /dev/null 2>&1
+    sudo apt-get install -y git wmctrl python3 > /dev/null 2>&1
 fi
 
-TIPO_TV=""
-NOVA_URL=""
-LOJA_INPUT=""
+acao="" tv="" loja="" link=""
 
-# parse seguro dos argumentos
 while [[ "$#" -gt 0 ]]; do
     case $1 in
-        --tv)
-            TIPO_TV="$2"
-            shift 2
-            ;;
-        --update)
-            NOVA_URL="$2"
-            shift 2
-            ;;
-        --loja)
-            LOJA_INPUT="$2"
-            shift 2
-            ;;
-        *)
-            echo "erro: parametro invalido: $1"
-            exit 1
-            ;;
+        --acao) acao="$2"; shift 2 ;;
+        --tv) tv="$2"; shift 2 ;;
+        --loja) loja="$2"; shift 2 ;;
+        --link) link="$2"; shift 2 ;;
+        *) shift ;;
     esac
 done
 
-# valido se o parametro obrigatorio foi passado
-if [ -z "$TIPO_TV" ]; then
-    echo "Erro!!:  É necessário informar o tipo da tv com '--tv padaria' ou '--tv acougue'"
-    exit 1
-fi
+ext_dir="$HOME/tatico_extensions"
+repo_dir="$ext_dir/taticoAutoClicker"
+repo_url="https://github.com/Pedrohrn/taticoAutoClicker.git"
 
-# carrego as variaveis persistidas no disco
-source "$CONFIG_FILE"
+function _tk_processar_json() {
+    python3 -c "
+import json, sys, re, os
 
-# atualizo o nome da loja no arquivo de configuracao usando sed
-if [ -n "$LOJA_INPUT" ]; then
-    sed -i 's|^NOME_LOJA=.*|NOME_LOJA="'"$LOJA_INPUT"'"|' "$CONFIG_FILE"
-    NOME_LOJA="$LOJA_INPUT"
-fi
+acao = '$acao'
+tv = '$tv'
+loja = '$loja'
+link = '$link'
+repo = '$repo_dir'
 
-if [ -n "$NOVA_URL" ]; then
-    if [ "$TIPO_TV" = "padaria" ]; then
-        sed -i 's|^URL_PADARIA=.*|URL_PADARIA="'"$NOVA_URL"'"|' "$CONFIG_FILE"
-        URL_PADARIA="$NOVA_URL"
-    elif [ "$TIPO_TV" = "acougue" ]; then
-        sed -i 's|^URL_ACOUGUE=.*|URL_ACOUGUE="'"$NOVA_URL"'"|' "$CONFIG_FILE"
-        URL_ACOUGUE="$NOVA_URL"
-    else
-        echo "Erro: Tipo de tv inválido. Utilize 'padaria' ou 'acougue'."
-        exit 1
-    fi
-fi
+c_path = os.path.join(repo, 'config.json')
+s_path = os.path.join(repo, 'sample_config.json')
 
-URL_ALVO=""
-if [ "$TIPO_TV" = "padaria" ]; then
-    URL_ALVO="$URL_PADARIA"
-elif [ "$TIPO_TV" = "acougue" ]; then
-    URL_ALVO="$URL_ACOUGUE"
-else
-    echo "Erro: Tipo de tv inválido."
-    exit 1
-fi
+try:
+    with open(s_path if acao == 'install' else c_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+except Exception:
+    sys.exit(1)
 
-# detectando dinamicamente o binario do google chrome no ambiente - snap, deb/apt
-CHROME_BIN=""
-if command -v google-chrome &> /dev/null; then
-    CHROME_BIN=$(command -v google-chrome)
-elif command -v google-chrome-stable &> /dev/null; then
-    CHROME_BIN=$(command -v google-chrome-stable)
-elif [ -x "/snap/bin/google-chrome" ]; then
-    CHROME_BIN="/snap/bin/google-chrome"
-else
-    echo "erro: binario do google chrome nao encontrado no sistema."
-    exit 1
-fi
+if acao == 'install':
+    p_nome = 'TVS Padaria' if tv == 'padaria' else 'TVs Açougue'
+    p_id = next((p['id'] for p in data.get('perfis', []) if re.search(p_nome, p.get('nome', ''), re.IGNORECASE)), '')
 
-pkill chrome || true
+    tv_upper = 'PADARIA' if tv == 'padaria' else 'AÇOUGUE'
+    r_nome = f'{tv_upper} {loja}'
 
-SERVICE_DIR="$HOME/.config/systemd/user"
-SERVICE_FILE="$SERVICE_DIR/tatico-chrome.service"
+    data['rotinaAtualNome'] = r_nome
+    if data.get('rotinas'):
+        r = data['rotinas'][0]
+        r['nome'] = r_nome
+        r['perfil_id'] = p_id
+        r['autorefresh_ativo'] = True
+        r['autorefresh_min'] = 60
+        if len(r.get('passos_avancados', [])) > 1:
+            r['passos_avancados'][1]['parada_seletor'] = loja
 
-mkdir -p "$SERVICE_DIR"
+elif acao == 'config':
+    if loja and data.get('rotinas'):
+        r = data['rotinas'][0]
+        prefixo = r['nome'].split()[0] if r.get('nome') else ''
+        n_nome = f'{prefixo} {loja}'.strip()
+        r['nome'] = n_nome
+        data['rotinaAtualNome'] = n_nome
+        if len(r.get('passos_avancados', [])) > 1:
+            r['passos_avancados'][1]['parada_seletor'] = loja
 
-# criando o servico com o carminho correto do binario do chrome
-cat <<EOF > "$SERVICE_FILE"
+    if link and tv:
+        p_nome = 'TVS Padaria' if tv == 'padaria' else 'TVs Açougue'
+        for p in data.get('perfis', []):
+            if re.search(p_nome, p.get('nome', ''), re.IGNORECASE):
+                if p.get('urls_alvo'):
+                    p['urls_alvo'][0] = link
+
+with open(c_path, 'w', encoding='utf-8') as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+"
+}
+
+# configurando ambiente de servicos assincronos e verificando o executavel do chrome
+function _tk_configurar_systemd() {
+    local bin=$(command -v google-chrome || command -v google-chrome-stable || echo "/snap/bin/google-chrome")
+    local url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))")
+
+    local sd_dir="$HOME/.config/systemd/user"
+    mkdir -p "$sd_dir"
+
+    cat <<SYS_EOF > "$sd_dir/tatico-chrome.service"
 [Unit]
-Description=Tatico Auto Chrome Kiosk
+Description=Tatico Chrome Fullscreen
 After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStartPre=/usr/bin/sleep 10
-ExecStart=$CHROME_BIN --start-fullscreen --disable-session-crashed-bubble --disable-infobars --no-first-run --load-extension="$EXTENSIONS_DIR/taticoAutoClicker" "$URL_ALVO"
+KillMode=none
+ExecStartPre=/usr/bin/sleep 3
+ExecStart=$bin --start-fullscreen --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --load-extension=$repo_dir "$url"
+ExecStartPost=/bin/bash -c "sleep 8; wmctrl -r 'Google Chrome' -b add,above || true"
 Restart=always
 RestartSec=10
 Environment=DISPLAY=:0
 
 [Install]
 WantedBy=default.target
+SYS_EOF
+
+    cat <<SYS_EOF > "$sd_dir/tatico-chrome-restart.service"
+[Unit]
+Description=Restart Kiosk Service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl --user restart tatico-chrome.service
+SYS_EOF
+
+    cat <<SYS_EOF > "$sd_dir/tatico-chrome-restart.timer"
+[Unit]
+Description=Timer Tatico Restart Kiosk Diario
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+OnCalendar=*-*-* 18:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+SYS_EOF
+
+    systemctl --user daemon-reload
+    systemctl --user enable --now tatico-chrome.service
+    systemctl --user enable --now tatico-chrome-restart.timer
+}
+
+# decidindo a execucao baseada na acao exigida
+case "$acao" in
+    install)
+        mkdir -p "$ext_dir"
+        cd "$ext_dir" || exit 1
+        if [ -d "$repo_dir" ]; then
+            cd "$repo_dir" && git reset --hard && git pull
+        else
+            git clone "$repo_url" "$repo_dir"
+            cd "$repo_dir" || exit 1
+        fi
+        _tk_processar_json
+        _tk_configurar_systemd
+        echo "instalação base concluída."
+        ;;
+    update)
+        cd "$repo_dir" || exit 1
+        cp config.json /tmp/tk_cfg_bkp.json 2>/dev/null || true
+        git reset --hard && git pull
+        mv /tmp/tk_cfg_bkp.json config.json 2>/dev/null || true
+        echo "extensão atualizada."
+        ;;
+    config)
+        _tk_processar_json
+        systemctl --user restart tatico-chrome.service
+        echo "configurações aplicadas."
+        ;;
+esac
 EOF
 
-# recarrego os daemons e aplico a inicializacao
-systemctl --user daemon-reload
-systemctl --user enable tatico-chrome.service
-systemctl --user restart tatico-chrome.service
+chmod +x "$TK_SCRIPT"
 
-echo "Serviço configurado e reiniciado via systemd para tv $TIPO_TV (loja: ${NOME_LOJA:-CAMPINAS})"
 
-sleep 10 && exit
+# validando se estamos atualizando apenas os scripts ou rodando instalacao completa
+if [ "$1" == "--only-cmds" ]; then
+    # finaliza silenciosamente apos recriar os arquivos base
+    exit 0
+fi
+
+# forcando o carregamento dos aliases nesta sessao de pipe
+source "$TK_RC"
+
+# iniciando interacao de configuracao final da tv
+instalar_tk
