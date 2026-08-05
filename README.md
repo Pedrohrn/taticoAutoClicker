@@ -226,3 +226,88 @@ Navegue até o link do Microsoft PB do Tatico e recarregue a tela.
 </p>
 
 ---
+
+# COMANDOS PDVS/TOTVS
+
+# Diagnóstico e Manutenção TOTVS PDV
+
+## 1. Diagnóstico de Vídeo e Acesso Remoto
+Diagnóstico gráfico e de conexões remotas executado via SSH sem depender da variável $DISPLAY.
+
+```bash
+# checando se estou em um ambiente virtualizado
+systemd-detect-virt
+
+# buscando gpus no barramento pci
+lspci -nn | grep -i vga
+
+# lendo status dos monitores direto do sysfs pra não travar o x server via ssh
+grep -H "^connected" /sys/class/drm/*/status 2>/dev/null
+
+# filtrando processos de acesso remoto na sessao atual
+ps -eo pid,user,comm,args | grep -iE 'vnc|xrdp|nomachine|teamviewer|anydesk' | grep -v grep
+```
+
+## 2. Diagnóstico de Sistema e Arquivos
+Coleta do estado de RAM, CPU e disco sem gerar contenção (lock) de banco de dados.
+
+```bash
+# checando uso de ram
+free -h
+
+# listando os 10 processos que mais gastam ram, ordenando na base pra poupar cpu
+ps -eo pid,%mem,%cpu,comm --sort=-%mem | head -n 11
+
+# pegando os 10 processos com maior uso de cpu
+ps -eo pid,%cpu,%mem,comm --sort=-%cpu | head -n 11
+
+# mapeando gargalos no disco silenciando erros de permissao
+du -sh /* 2>/dev/null | sort -rh | head -n 15
+
+# caçando arquivos pesados acima de 100mb
+find / -type f -size +100M -exec ls -lh {} + 2>/dev/null | awk '{ print $9 ": " $5 }'
+
+# medindo os diretorios temporarios
+du -sh /tmp /var/tmp /var/log 2>/dev/null
+
+# mapeando pastas de log e spool do totvs, ajustando o path base se necessario
+du -sh /opt/totvs/protheus_data/system /opt/totvs/protheus_data/spool 2>/dev/null
+
+# checando o uptime do caixa
+uptime -p
+```
+
+## 3. Resoluções Seguras
+
+### Alto Consumo de RAM/CPU
+Evitar `kill -9` em processos do banco de dados e client.
+
+```bash
+# parando o servico do totvs graciosamente
+sudo systemctl restart totvs-pdv.service
+
+# matando o processo orfao de forma limpa via sigterm
+sudo kill -15 <NUMERO_DO_PID>
+```
+
+### Disco Cheio e Excesso de Logs
+Não remover arquivos de log em uso direto com `rm`.
+
+```bash
+# truncando log pra liberar disco sem soltar o lock do inode
+> /caminho/do/arquivo/de/log/muito_grande.log
+
+# limpando logs do journal mantendo so os ultimos 3 dias
+sudo journalctl --vacuum-time=3d
+```
+
+### Congelamento da Interface Gráfica
+Se o SSH responde e não há interferência de VNC, não reinicie o computador inteiro cortando as transações locais.
+
+```bash
+# resetando o display manager (trocar por lightdm se necessario)
+sudo systemctl restart gdm3
+```
+
+### Reconstrução de Índices TOTVS
+Nunca excluir arquivos temporários (`.cdx`, `.ind`) com os processos ativos. Pare o serviço, mova os arquivos problemáticos para `/tmp` como backup de segurança e inicie o serviço forçando a reindexação nativa.
