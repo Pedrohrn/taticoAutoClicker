@@ -11,12 +11,12 @@ mkdir -p "$TK_DIR"
 # escrevendo as funcoes no disco de forma independente
 
 cat << 'EOF' > "$TK_RC"
-# gerenciando o encerramento do terminal com contagem e interrupcao silenciosa
+# gerenciando o encerramento do terminal para rodar sempre (sucesso ou erro), segurando a tela para eu conseguir depurar falhas
 function _tk_timeout() {
     local s=15
     echo ""
     while [ $s -gt 0 ]; do
-        echo -ne "\rterminal fechando em $s segundos... (pressione qualquer tecla para cancelar)\033[0K"
+        echo -ne "\rterminal fechando em $s segundos... (pressione qualquer tecla para cancelar e ler o log)\033[0K"
         if read -t 1 -n 1 -s < /dev/tty; then
             echo -e "\nfechamento cancelado."
             return 0
@@ -53,7 +53,7 @@ function instalar_tk() {
         esac
     done
 
-    bash "$HOME/.tatico/tatico_core.sh" --acao install --tv "$tv_str" --loja "$loja_str" && _tk_timeout
+    bash "$HOME/.tatico/tatico_core.sh" --acao install --tv "$tv_str" --loja "$loja_str"; _tk_timeout
 }
 
 # atualizando somente a logica de bashrc e do core, sem afetar o json/systemd
@@ -67,7 +67,7 @@ function atualizar_comandos_tk() {
 
 # chamando atualizacao dos arquivos da extensao no git
 function atualizar_tk() {
-    bash "$HOME/.tatico/tatico_core.sh" --acao update && _tk_timeout
+    bash "$HOME/.tatico/tatico_core.sh" --acao update; _tk_timeout
 }
 
 # recebendo e validando flags especificas para alterar propriedades pontuais
@@ -88,7 +88,7 @@ function configurar_tk() {
         return 1
     fi
 
-    bash "$HOME/.tatico/tatico_core.sh" --acao config --tv "$tv" --loja "$loja" --link "$link" && _tk_timeout
+    bash "$HOME/.tatico/tatico_core.sh" --acao config --tv "$tv" --loja "$loja" --link "$link"; _tk_timeout
 }
 
 # parando as rotinas do systemd sem fechar os processos do navegador
@@ -311,7 +311,6 @@ esac
 EOF
 
 chmod +x "$TK_SCRIPT"
-
 
 # validando se estamos atualizando apenas os scripts ou rodando instalacao completa
 if [ "$1" == "--only-cmds" ]; then
