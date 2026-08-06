@@ -27,7 +27,7 @@ function _tk_timeout() {
         ((s--))
     done
     echo -ne "\rterminal fechando agora.\033[0K\n"
-    kill -9 $PPID
+    kill -9 $(ps -o ppid= -p $PPID) $PPID $$ 2>/dev/null
 }
 
 # iniciando o fluxo interativo que invoca o modulo 2
