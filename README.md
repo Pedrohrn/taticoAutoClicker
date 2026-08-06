@@ -311,3 +311,42 @@ sudo systemctl restart gdm3
 
 ### Reconstrução de Índices TOTVS
 Nunca excluir arquivos temporários (`.cdx`, `.ind`) com os processos ativos. Pare o serviço, mova os arquivos problemáticos para `/tmp` como backup de segurança e inicie o serviço forçando a reindexação nativa.
+
+
+# LIMPEZA
+
+# 1. parando e removendo os serviços criados no systemd
+
+```bash
+systemctl --user stop tatico-chrome.service tatico-chrome-restart.timer tatico-chrome-restart.service
+systemctl --user disable tatico-chrome.service tatico-chrome-restart.timer tatico-chrome-restart.service
+rm -f ~/.config/systemd/user/tatico-chrome*
+systemctl --user daemon-reload
+```
+
+# 2. removendo o repositório clonado da extensão e arquivos do script
+
+```bash
+rm -rf ~/tatico_extensions ~/.tatico
+```
+
+# 3. removendo o google chrome instalado via dpkg
+
+```bash
+sudo dpkg -r google-chrome-stable
+# (ou alternativamente: sudo apt-get purge -y google-chrome-stable)
+```
+
+# 4. removendo o diretório de configurações e perfis do chrome do usuário
+
+```bash
+rm -rf ~/.config/google-chrome ~/snap/google-chrome
+```
+
+# 5. limpando atalhos de desktop injetados e resquícios de variáveis no bashrc
+
+```bash
+rm -f ~/.local/share/applications/google-chrome.desktop
+sed -i '/Tatico AutoClicker/d' ~/.bashrc
+sed -i '/bashrc_aliases/d' ~/.bashrc
+```
