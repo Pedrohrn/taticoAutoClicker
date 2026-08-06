@@ -160,10 +160,9 @@ link = '$link'
 repo = '$repo_dir'
 
 c_path = os.path.join(repo, 'config.json')
-s_path = os.path.join(repo, 'sample_config.json')
 
 try:
-    with open(s_path if acao == 'install' else c_path, 'r', encoding='utf-8') as f:
+    with open(c_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 except Exception:
     sys.exit(1)
@@ -272,6 +271,9 @@ case "$acao" in
             git clone "$repo_url" "$repo_dir"
             cd "$repo_dir" || exit 1
         fi
+
+        cp -f "$repo_dir/sample_config.json" "$repo_dir/config.json" 2>/dev/null || cp -f "$repo_dir/sample.json" "$repo_dir/config.json" 2>/dev/null
+
         _tk_processar_json
         _tk_configurar_systemd
         echo "instalação base concluída."
