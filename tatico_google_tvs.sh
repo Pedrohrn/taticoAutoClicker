@@ -1,3 +1,5 @@
+# tatico_google_tvs.sh
+
 #!/bin/bash
 
 TK_DIR="$HOME/.tatico"
@@ -213,6 +215,24 @@ function _tk_configurar_systemd() {
 
     local sd_dir="$HOME/.config/systemd/user"
     mkdir -p "$sd_dir"
+
+    # injetando a flag de modo desenvolvedor diretamente nos profiles do chrome via python stdlib
+    python3 -c "
+import json, os
+paths = [os.path.expanduser('~/.config/google-chrome/Default/Preferences'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default/Preferences')]
+for p in paths:
+    try:
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        data = {}
+        if os.path.exists(p):
+            with open(p, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        data.setdefault('extensions', {}).setdefault('ui', {})['developer_mode'] = True
+        with open(p, 'w', encoding='utf-8') as f:
+            json.dump(data, f)
+    except Exception:
+        pass
+"
 
     cat <<SYS_EOF > "$sd_dir/tatico-chrome.service"
 [Unit]
