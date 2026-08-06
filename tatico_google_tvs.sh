@@ -231,6 +231,15 @@ for p in paths:
         pass
 "
 
+    # espelhando a configuração de auto-load para o atalho de desktop do usuário (cobrindo execuções manuais do chrome)
+    local desk_path="$HOME/.local/share/applications/google-chrome.desktop"
+    mkdir -p "$HOME/.local/share/applications"
+    if [ -f "/usr/share/applications/google-chrome.desktop" ]; then
+        cp "/usr/share/applications/google-chrome.desktop" "$desk_path"
+        sed -i "s|^Exec=/usr/bin/google-chrome-stable|Exec=$bin --load-extension=$repo_dir|g" "$desk_path"
+        update-desktop-database "$HOME/.local/share/applications" &>/dev/null || true
+    fi
+
     cat <<SYS_EOF > "$sd_dir/tatico-chrome.service"
 [Unit]
 Description=Tatico Chrome Fullscreen
