@@ -302,6 +302,11 @@ case "$acao" in
 
         _tk_processar_json
         _tk_configurar_systemd
+
+        # matando instâncias zumbis ou prévias do chrome para garantir que o serviço inicie uma sessão limpa com a nova flag de extensão inserida
+        pkill -f "chrome" || true
+        systemctl --user restart tatico-chrome.service
+
         echo "instalação base concluída."
         ;;
     update)
