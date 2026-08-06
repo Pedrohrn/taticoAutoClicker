@@ -1,5 +1,3 @@
-# tatico_google_tvs.sh
-
 #!/bin/bash
 
 TK_DIR="$HOME/.tatico"
@@ -8,7 +6,6 @@ TK_SCRIPT="$TK_DIR/tatico_core.sh"
 REPO_RAW_URL="https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh"
 
 mkdir -p "$TK_DIR"
-
 
 # MÓDULO 1: GERADOR DE COMANDOS E INTERAÇÃO
 # escrevendo as funcoes no disco de forma independente
