@@ -11,8 +11,13 @@ mkdir -p "$TK_DIR"
 # escrevendo as funcoes no disco de forma independente
 
 cat << 'EOF' > "$TK_RC"
-# gerenciando o encerramento do terminal para rodar sempre (sucesso ou erro), segurando a tela para eu conseguir depurar falhas
 function _tk_timeout() {
+    local status=$1
+    if [ "$status" -ne 0 ]; then
+        echo -e "\n[ERRO] a operação falhou (código de saída: $status). o terminal permanecerá aberto para análise do log."
+        return "$status"
+    fi
+
     local s=15
     echo ""
     while [ $s -gt 0 ]; do
@@ -53,21 +58,26 @@ function instalar_tk() {
         esac
     done
 
-    bash "$HOME/.tatico/tatico_core.sh" --acao install --tv "$tv_str" --loja "$loja_str"; _tk_timeout
+    bash "$HOME/.tatico/tatico_core.sh" --acao install --tv "$tv_str" --loja "$loja_str"
+    _tk_timeout $?
 }
 
 # atualizando somente a logica de bashrc e do core, sem afetar o json/systemd
 function atualizar_comandos_tk() {
     echo "baixando comandos mais recentes..."
     curl -sL "https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh" | bash -s -- --only-cmds
-    source "$HOME/.tatico/bashrc_aliases"
-    echo "comandos e core atualizados com sucesso."
-    _tk_timeout
+    local status=$?
+    if [ "$status" -eq 0 ]; then
+        source "$HOME/.tatico/bashrc_aliases"
+        echo "comandos e core atualizados com sucesso."
+    fi
+    _tk_timeout $status
 }
 
 # chamando atualizacao dos arquivos da extensao no git
 function atualizar_tk() {
-    bash "$HOME/.tatico/tatico_core.sh" --acao update; _tk_timeout
+    bash "$HOME/.tatico/tatico_core.sh" --acao update
+    _tk_timeout $?
 }
 
 # recebendo e validando flags especificas para alterar propriedades pontuais
@@ -88,30 +98,40 @@ function configurar_tk() {
         return 1
     fi
 
-    bash "$HOME/.tatico/tatico_core.sh" --acao config --tv "$tv" --loja "$loja" --link "$link"; _tk_timeout
+    bash "$HOME/.tatico/tatico_core.sh" --acao config --tv "$tv" --loja "$loja" --link "$link"
+    _tk_timeout $?
 }
 
 # parando as rotinas do systemd sem fechar os processos do navegador
 function pausar_tk() {
     systemctl --user stop tatico-chrome.service tatico-chrome-restart.timer
-    echo "kiosk pausado (processos mantidos em execução)."
-    _tk_timeout
+    local status=$?
+    if [ "$status" -eq 0 ]; then
+        echo "kiosk pausado (processos mantidos em execução)."
+    fi
+    _tk_timeout $status
 }
 
 # retomando o gerenciamento do systemd
 function resumir_tk() {
     systemctl --user start tatico-chrome.service tatico-chrome-restart.timer
-    echo "kiosk resumido com sucesso."
-    _tk_timeout
+    local status=$?
+    if [ "$status" -eq 0 ]; then
+        echo "kiosk resumido com sucesso."
+    fi
+    _tk_timeout $status
 }
 
 # limpando processos zumbis e reiniciando o servico master
 function reiniciar_tk() {
     pkill -f "google-chrome.*taticoAutoClicker" || true
     systemctl --user restart tatico-chrome.service
-    local pid=$(systemctl --user show -p MainPID --value tatico-chrome.service)
-    echo "kiosk reiniciado com sucesso. PID atual: $pid"
-    _tk_timeout
+    local status=$?
+    if [ "$status" -eq 0 ]; then
+        local pid=$(systemctl --user show -p MainPID --value tatico-chrome.service)
+        echo "kiosk reiniciado com sucesso. PID atual: $pid"
+    fi
+    _tk_timeout $status
 }
 EOF
 
@@ -221,6 +241,12 @@ function _tk_configurar_systemd() {
 
     local url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))")
 
+    local chrome_flags="--start-fullscreen --disable-infobars --restore-last-session --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --disable-features=TranslateUI --load-extension=$repo_dir"
+
+    local sd_dir="$HOME/.config/systemd/user"
+    mkdir -p "$sd_dir"
+
+    python3 -c "
 import json, os, hashlib
 
 repo = '$repo_dir'
@@ -317,7 +343,6 @@ SYS_EOF
     systemctl --user enable --now tatico-chrome-restart.timer
 }
 
-# decidindo a execucao baseada na acao exigida
 case "$acao" in
     install)
         mkdir -p "$ext_dir"
@@ -332,24 +357,24 @@ case "$acao" in
         cp -f "$repo_dir/sample_config.json" "$repo_dir/config.json" 2>/dev/null || cp -f "$repo_dir/sample.json" "$repo_dir/config.json" 2>/dev/null
 
         _tk_processar_json
-        _tk_configurar_systemd
+        _tk_configurar_systemd || exit 1
 
         # matando instâncias zumbis ou prévias do chrome para garantir que o serviço inicie uma sessão limpa com a nova flag de extensão inserida
         pkill -f "chrome" || true
-        systemctl --user restart tatico-chrome.service
+        systemctl --user restart tatico-chrome.service || { echo -e "\n[ERRO] falha ao registrar o servico no systemctl."; exit 1; }
 
         echo "instalação base concluída."
         ;;
     update)
         cd "$repo_dir" || exit 1
         cp config.json /tmp/tk_cfg_bkp.json 2>/dev/null || true
-        git reset --hard && git pull
+        git reset --hard && git pull || exit 1
         mv /tmp/tk_cfg_bkp.json config.json 2>/dev/null || true
         echo "extensão atualizada."
         ;;
     config)
         _tk_processar_json
-        systemctl --user restart tatico-chrome.service
+        systemctl --user restart tatico-chrome.service || exit 1
         echo "configurações aplicadas."
         ;;
 esac
