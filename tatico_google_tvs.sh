@@ -210,12 +210,19 @@ function _tk_configurar_systemd() {
     local bin=$(command -v google-chrome || command -v google-chrome-stable || echo "/snap/bin/google-chrome")
     local url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))")
 
+    local chrome_flags="--start-fullscreen --disable-infobars --restore-last-session --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --disable-features=TranslateUI --load-extension=$repo_dir"
+
     local sd_dir="$HOME/.config/systemd/user"
     mkdir -p "$sd_dir"
 
-    # injetando a flag de modo desenvolvedor diretamente nos profiles do chrome via python stdlib
+    # calculando o hash da extensao pra injetar na perfil antes da inicializacao
     python3 -c "
-import json, os
+import json, os, hashlib
+
+repo = '$repo_dir'
+h = hashlib.sha256(repo.encode('utf-8')).hexdigest()[:32]
+ext_id = ''.join(chr(ord(c) + 49) if c.isdigit() else chr(ord(c) + 10) for c in h)
+
 paths = [os.path.expanduser('~/.config/google-chrome/Default/Preferences'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default/Preferences')]
 for p in paths:
     try:
@@ -224,22 +231,42 @@ for p in paths:
         if os.path.exists(p):
             with open(p, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-        data.setdefault('extensions', {}).setdefault('ui', {})['developer_mode'] = True
+
+        exts = data.setdefault('extensions', {})
+        exts.setdefault('ui', {})['developer_mode'] = True
+
+        pinned = exts.setdefault('pinned_extensions', [])
+        if ext_id not in pinned:
+            pinned.append(ext_id)
+
+        toolbar = exts.setdefault('toolbar', [])
+        if ext_id not in toolbar:
+            toolbar.append(ext_id)
+
+        prof = data.setdefault('profile', {})
+        prof['exit_type'] = 'Normal'
+        prof['exited_cleanly'] = True
+
         with open(p, 'w', encoding='utf-8') as f:
             json.dump(data, f)
     except Exception:
         pass
 "
 
-    # espelhando a configuração de auto-load para o atalho de desktop do usuário (cobrindo execuções manuais do chrome)
     local desk_path="$HOME/.local/share/applications/google-chrome.desktop"
     mkdir -p "$HOME/.local/share/applications"
     if [ -f "/usr/share/applications/google-chrome.desktop" ]; then
         cp "/usr/share/applications/google-chrome.desktop" "$desk_path"
-        sed -i "s|^Exec=/usr/bin/google-chrome-stable|Exec=$bin --load-extension=$repo_dir|g" "$desk_path"
+    elif [ -f "/var/lib/snapd/desktop/applications/google-chrome_google-chrome.desktop" ]; then
+        cp "/var/lib/snapd/desktop/applications/google-chrome_google-chrome.desktop" "$desk_path"
+    fi
+
+    if [ -f "$desk_path" ]; then
+        sed -i "s|^Exec=.*|Exec=$bin $chrome_flags %U|g" "$desk_path"
         update-desktop-database "$HOME/.local/share/applications" &>/dev/null || true
     fi
 
+    # limpando em background qualquer lixo residual de sessao interrompida segundos antes do binario ser invocado pelo servico
     cat <<SYS_EOF > "$sd_dir/tatico-chrome.service"
 [Unit]
 Description=Tatico Chrome Fullscreen
@@ -248,8 +275,8 @@ After=graphical-session.target
 [Service]
 Type=simple
 KillMode=none
-ExecStartPre=/usr/bin/sleep 3
-ExecStart=$bin --start-fullscreen --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --load-extension=$repo_dir "$url"
+ExecStartPre=/bin/bash -c "sed -i 's/\"exit_type\":\"Crashed\"/\"exit_type\":\"Normal\"/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true; sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true; sleep 2"
+ExecStart=$bin $chrome_flags "$url"
 ExecStartPost=/bin/bash -c "sleep 8; wmctrl -r 'Google Chrome' -b add,above || true"
 Restart=always
 RestartSec=10
