@@ -125,6 +125,7 @@ function resumir_tk() {
 # limpando processos zumbis e reiniciando o servico master
 function reiniciar_tk() {
     pkill -9 -f "chrome" || true
+    sleep 2
     systemctl --user restart tatico-chrome.service
     local status=$?
     if [ "$status" -eq 0 ]; then
@@ -246,7 +247,6 @@ function _tk_configurar_systemd() {
     local sd_dir="$HOME/.config/systemd/user"
     mkdir -p "$sd_dir"
 
-    # injetando developer mode. como matamos o chrome antes de chamar essa funcao na instalacao, garantimos que ele nao sobrescreva o arquivo durante o fechamento
     python3 -c "
 import json, os
 
@@ -281,7 +281,6 @@ for p in paths:
         update-desktop-database "$HOME/.local/share/applications" &>/dev/null || true
     fi
 
-    # execstartpre garante a morte de fantasmas via pkill -9 para a flag --load-extension funcionar e limpa estado sujo de crash
     cat <<SYS_EOF > "$sd_dir/tatico-chrome.service"
 [Unit]
 Description=Tatico Chrome Fullscreen
@@ -290,7 +289,7 @@ After=graphical-session.target
 [Service]
 Type=simple
 KillMode=none
-ExecStartPre=/bin/bash -c "pkill -9 -f chrome || true; sleep 2; sed -i 's/\"exit_type\":\"Crashed\"/\"exit_type\":\"Normal\"/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true; sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true"
+ExecStartPre=/bin/bash -c "sed -i 's/\"exit_type\":\"Crashed\"/\"exit_type\":\"Normal\"/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true; sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true; sleep 1"
 ExecStart=$bin $chrome_flags "$url"
 ExecStartPost=/bin/bash -c "sleep 8; wmctrl -r 'Google Chrome' -b add,above || true"
 Restart=always
@@ -323,7 +322,6 @@ Persistent=true
 WantedBy=timers.target
 SYS_EOF
 
-    # registrando o servico sem o --now no tatico-chrome.service para evitar start duplo durante a instalacao
     systemctl --user daemon-reload
     systemctl --user enable tatico-chrome.service
     systemctl --user enable --now tatico-chrome-restart.timer
