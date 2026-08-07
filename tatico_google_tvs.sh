@@ -242,15 +242,29 @@ function _tk_configurar_systemd() {
 
     local url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))")
 
-    local chrome_flags="--start-fullscreen --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --disable-features=TranslateUI --load-extension=$repo_dir"
+    local chrome_flags="--start-fullscreen --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --disable-features=TranslateUI"
 
     local sd_dir="$HOME/.config/systemd/user"
     mkdir -p "$sd_dir"
 
     python3 -c "
-import json, os
+import json, os, hashlib
 
-paths = [os.path.expanduser('~/.config/google-chrome/Default/Preferences'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default/Preferences')]
+repo = '$repo_dir'
+h = hashlib.sha256(repo.encode('utf-8')).hexdigest()[:32]
+ext_id = ''.join(chr(ord(c) + 49) if c.isdigit() else chr(ord(c) + 10) for c in h)
+
+ext_dir_path = os.path.expanduser('~/.config/google-chrome/External Extensions')
+os.makedirs(ext_dir_path, exist_ok=True)
+ext_json_path = os.path.join(ext_dir_path, f'{ext_id}.json')
+
+with open(ext_json_path, 'w', encoding='utf-8') as f:
+    json.dump({
+        'external_path': repo,
+        'external_version': '1.0'
+    }, f, indent=2)
+
+paths = [os.path.expanduser('~/.config/google-chrome/Default/Preferences')]
 for p in paths:
     try:
         os.makedirs(os.path.dirname(p), exist_ok=True)
