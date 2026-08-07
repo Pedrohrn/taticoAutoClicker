@@ -207,16 +207,20 @@ with open(c_path, 'w', encoding='utf-8') as f:
 
 # configurando ambiente de servicos assincronos e verificando o executavel do chrome
 function _tk_configurar_systemd() {
-    local bin=$(command -v google-chrome || command -v google-chrome-stable || echo "/snap/bin/google-chrome")
+    local bin=""
+    for p in "/usr/bin/google-chrome-stable" "/usr/bin/google-chrome" "/opt/google/chrome/google-chrome" "/snap/bin/google-chrome"; do
+        if [ -x "$p" ]; then
+            bin="$p"
+            break
+        fi
+    done
+
+    if [ -z "$bin" ]; then
+        bin=$(command -v google-chrome-stable || command -v google-chrome || echo "/usr/bin/google-chrome-stable")
+    fi
+
     local url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))")
 
-    local chrome_flags="--start-fullscreen --disable-infobars --restore-last-session --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --disable-features=TranslateUI --load-extension=$repo_dir"
-
-    local sd_dir="$HOME/.config/systemd/user"
-    mkdir -p "$sd_dir"
-
-    # calculando o hash da extensao pra injetar na perfil antes da inicializacao
-    python3 -c "
 import json, os, hashlib
 
 repo = '$repo_dir'
