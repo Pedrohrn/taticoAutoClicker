@@ -124,7 +124,7 @@ function resumir_tk() {
 
 # limpando processos zumbis e reiniciando o servico master
 function reiniciar_tk() {
-    pkill -f "google-chrome.*taticoAutoClicker" || true
+    pkill -9 -f "chrome" || true
     systemctl --user restart tatico-chrome.service
     local status=$?
     if [ "$status" -eq 0 ]; then
@@ -241,17 +241,14 @@ function _tk_configurar_systemd() {
 
     local url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))")
 
-    local chrome_flags="--start-fullscreen --disable-infobars --restore-last-session --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --disable-features=TranslateUI --load-extension=$repo_dir"
+    local chrome_flags="--start-fullscreen --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --disable-features=TranslateUI --load-extension=$repo_dir"
 
     local sd_dir="$HOME/.config/systemd/user"
     mkdir -p "$sd_dir"
 
+    # injetando developer mode. como matamos o chrome antes de chamar essa funcao na instalacao, garantimos que ele nao sobrescreva o arquivo durante o fechamento
     python3 -c "
-import json, os, hashlib
-
-repo = '$repo_dir'
-h = hashlib.sha256(repo.encode('utf-8')).hexdigest()[:32]
-ext_id = ''.join(chr(ord(c) + 49) if c.isdigit() else chr(ord(c) + 10) for c in h)
+import json, os
 
 paths = [os.path.expanduser('~/.config/google-chrome/Default/Preferences'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default/Preferences')]
 for p in paths:
@@ -264,18 +261,6 @@ for p in paths:
 
         exts = data.setdefault('extensions', {})
         exts.setdefault('ui', {})['developer_mode'] = True
-
-        pinned = exts.setdefault('pinned_extensions', [])
-        if ext_id not in pinned:
-            pinned.append(ext_id)
-
-        toolbar = exts.setdefault('toolbar', [])
-        if ext_id not in toolbar:
-            toolbar.append(ext_id)
-
-        prof = data.setdefault('profile', {})
-        prof['exit_type'] = 'Normal'
-        prof['exited_cleanly'] = True
 
         with open(p, 'w', encoding='utf-8') as f:
             json.dump(data, f)
@@ -296,7 +281,7 @@ for p in paths:
         update-desktop-database "$HOME/.local/share/applications" &>/dev/null || true
     fi
 
-    # limpando em background qualquer lixo residual de sessao interrompida segundos antes do binario ser invocado pelo servico
+    # execstartpre garante a morte de fantasmas via pkill -9 para a flag --load-extension funcionar e limpa estado sujo de crash
     cat <<SYS_EOF > "$sd_dir/tatico-chrome.service"
 [Unit]
 Description=Tatico Chrome Fullscreen
@@ -305,7 +290,7 @@ After=graphical-session.target
 [Service]
 Type=simple
 KillMode=none
-ExecStartPre=/bin/bash -c "sed -i 's/\"exit_type\":\"Crashed\"/\"exit_type\":\"Normal\"/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true; sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true; sleep 2"
+ExecStartPre=/bin/bash -c "pkill -9 -f chrome || true; sleep 2; sed -i 's/\"exit_type\":\"Crashed\"/\"exit_type\":\"Normal\"/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true; sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true"
 ExecStart=$bin $chrome_flags "$url"
 ExecStartPost=/bin/bash -c "sleep 8; wmctrl -r 'Google Chrome' -b add,above || true"
 Restart=always
@@ -338,13 +323,17 @@ Persistent=true
 WantedBy=timers.target
 SYS_EOF
 
+    # registrando o servico sem o --now no tatico-chrome.service para evitar start duplo durante a instalacao
     systemctl --user daemon-reload
-    systemctl --user enable --now tatico-chrome.service
+    systemctl --user enable tatico-chrome.service
     systemctl --user enable --now tatico-chrome-restart.timer
 }
 
 case "$acao" in
     install)
+        pkill -9 -f "chrome" || true
+        sleep 2
+
         mkdir -p "$ext_dir"
         cd "$ext_dir" || exit 1
         if [ -d "$repo_dir" ]; then
@@ -359,8 +348,6 @@ case "$acao" in
         _tk_processar_json
         _tk_configurar_systemd || exit 1
 
-        # matando instâncias zumbis ou prévias do chrome para garantir que o serviço inicie uma sessão limpa com a nova flag de extensão inserida
-        pkill -f "chrome" || true
         systemctl --user restart tatico-chrome.service || { echo -e "\n[ERRO] falha ao registrar o servico no systemctl."; exit 1; }
 
         echo "instalação base concluída."
