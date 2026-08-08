@@ -3,23 +3,53 @@ import { initRoutines } from './routine.js';
 import { initRevolver } from './revolver.js';
 import { initStorage } from './storage.js';
 
-// garanto o estado inicial do sistema caso seja a primeira instalacao
-function garantirEstadoInicial() {
+function garantirEstadoInicial(callbackInits) {
   chrome.storage.local.get(['perfis', 'rotinas', 'playlists', 'statusBarClosed'], (data) => {
-    const estado = {};
-    if (!data.perfis) estado.perfis = [];
-    if (!data.rotinas) estado.rotinas = [];
-    if (!data.playlists) estado.playlists = [];
-    if (data.statusBarClosed === undefined) estado.statusBarClosed = false;
 
-    if (Object.keys(estado).length > 0) {
-      chrome.storage.local.set(estado);
+    if (!data.perfis || data.perfis.length === 0) {
+      fetch(chrome.runtime.getURL('config.json'))
+        .then(res => res.json())
+        .then(config => {
+          chrome.storage.local.set({
+            perfis: config.perfis || [],
+            rotinas: config.rotinas || [],
+            playlists: config.playlists || [],
+            statusBarClosed: config.statusBarClosed !== undefined ? config.statusBarClosed : false,
+            rotinaAtualNome: config.rotinaAtualNome || ''
+          }, () => location.reload());
+        })
+        .catch(() => {
+          aplicarEstadoVazio(data);
+          callbackInits();
+        });
+    } else {
+      aplicarEstadoVazio(data);
+      callbackInits();
     }
   });
 }
 
+function aplicarEstadoVazio(data) {
+  const estado = {};
+  if (!data.perfis) estado.perfis = [];
+  if (!data.rotinas) estado.rotinas = [];
+  if (!data.playlists) estado.playlists = [];
+  if (data.statusBarClosed === undefined) estado.statusBarClosed = false;
+
+  if (Object.keys(estado).length > 0) {
+    chrome.storage.local.set(estado);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  garantirEstadoInicial();
+
+  // aguardo o carregamento de estado mestre antes de inicializar as views dos submodulos
+  garantirEstadoInicial(() => {
+    initProfiles();
+    initRoutines();
+    initRevolver();
+    initStorage();
+  });
 
   const navGroupTitles = document.querySelectorAll('.nav-group-title');
   const navBtns = document.querySelectorAll('.nav-btn.sub-btn, .nav-group-title[data-target], .sidebar > .nav-btn[data-target]');
@@ -101,9 +131,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // inicializo os submodulos injetando o escopo
-  initProfiles();
-  initRoutines();
-  initRevolver();
-  initStorage();
 });
