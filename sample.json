@@ -94,11 +94,8 @@
     }
   ],
   "statusBarClosed": false,
-  "statusBarCoords": {
-    "x": 918,
-    "y": 954
-  },
   "statusBarMinimized": false,
-  "statusBarPos": "custom",
+  "statusBarPos": "bottom",
+  "statusBarAlign": "center",
   "theme": "light"
 }
