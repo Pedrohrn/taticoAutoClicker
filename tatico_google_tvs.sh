@@ -124,7 +124,7 @@ function resumir_tk() {
 
 # limpando processos zumbis e reiniciando o servico master
 function reiniciar_tk() {
-    pkill -9 -f "chrome" || true
+    killall -9 chrome google-chrome google-chrome-stable 2>/dev/null || true
     sleep 2
     systemctl --user restart tatico-chrome.service
     local status=$?
@@ -242,29 +242,15 @@ function _tk_configurar_systemd() {
 
     local url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))")
 
-    local chrome_flags="--start-fullscreen --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --disable-features=TranslateUI"
+    local chrome_flags="--start-fullscreen --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --disable-features=TranslateUI --load-extension=$repo_dir"
 
     local sd_dir="$HOME/.config/systemd/user"
     mkdir -p "$sd_dir"
 
     python3 -c "
-import json, os, hashlib
+import json, os
 
-repo = '$repo_dir'
-h = hashlib.sha256(repo.encode('utf-8')).hexdigest()[:32]
-ext_id = ''.join(chr(ord(c) + 49) if c.isdigit() else chr(ord(c) + 10) for c in h)
-
-ext_dir_path = os.path.expanduser('~/.config/google-chrome/External Extensions')
-os.makedirs(ext_dir_path, exist_ok=True)
-ext_json_path = os.path.join(ext_dir_path, f'{ext_id}.json')
-
-with open(ext_json_path, 'w', encoding='utf-8') as f:
-    json.dump({
-        'external_path': repo,
-        'external_version': '1.0'
-    }, f, indent=2)
-
-paths = [os.path.expanduser('~/.config/google-chrome/Default/Preferences')]
+paths = [os.path.expanduser('~/.config/google-chrome/Default/Preferences'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default/Preferences')]
 for p in paths:
     try:
         os.makedirs(os.path.dirname(p), exist_ok=True)
@@ -303,7 +289,7 @@ After=graphical-session.target
 [Service]
 Type=simple
 KillMode=none
-ExecStartPre=/bin/bash -c "sed -i 's/\"exit_type\":\"Crashed\"/\"exit_type\":\"Normal\"/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true; sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/g' $HOME/.config/google-chrome/Default/Preferences 2>/dev/null || true; sleep 1"
+ExecStartPre=/bin/bash -c "killall -9 chrome google-chrome google-chrome-stable 2>/dev/null || true; sleep 2; rm -rf $HOME/.config/google-chrome/Default/Sessions/* $HOME/snap/google-chrome/current/.config/google-chrome/Default/Sessions/* 2>/dev/null || true; sed -i 's/\"exit_type\":\"Crashed\"/\"exit_type\":\"Normal\"/g' $HOME/.config/google-chrome/Default/Preferences $HOME/snap/google-chrome/current/.config/google-chrome/Default/Preferences 2>/dev/null || true; sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/g' $HOME/.config/google-chrome/Default/Preferences $HOME/snap/google-chrome/current/.config/google-chrome/Default/Preferences 2>/dev/null || true; sleep 10"
 ExecStart=$bin $chrome_flags "$url"
 ExecStartPost=/bin/bash -c "sleep 8; wmctrl -r 'Google Chrome' -b add,above || true"
 Restart=always
@@ -328,8 +314,7 @@ SYS_EOF
 Description=Timer Tatico Restart Kiosk Diario
 
 [Timer]
-OnCalendar=*-*-* 06:00:00
-OnCalendar=*-*-* 18:00:00
+OnCalendar=*-*-* 07:00:00
 Persistent=true
 
 [Install]
@@ -343,7 +328,7 @@ SYS_EOF
 
 case "$acao" in
     install)
-        pkill -9 -f "chrome" || true
+        killall -9 chrome google-chrome google-chrome-stable 2>/dev/null || true
         sleep 2
 
         mkdir -p "$ext_dir"
