@@ -242,10 +242,32 @@ function _tk_configurar_systemd() {
 
     local url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))")
 
-    local chrome_flags="--start-fullscreen --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --disable-features=TranslateUI --load-extension=$repo_dir"
+    local chrome_flags="--start-fullscreen --disable-print-preview --kiosk-printing --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --password-store=basic --use-mock-keychain --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' --metrics-recording-only --disable-sync --disable-background-networking --disable-prompt-on-repost --disable-client-side-phishing-detection --disable-component-update --disable-features=Translate,TranslateUI,OptimizationHints,MediaRouter,DialMediaRouteProvider,CalculateNativeWinOcclusion,CertificateTransparencyComponentUpdater,AutofillServerCommunication,PrivacySandboxSettings4 --load-extension=$repo_dir"
 
     local sd_dir="$HOME/.config/systemd/user"
     mkdir -p "$sd_dir"
+
+    # isso vai garantir que chrome inicie de maneira limpa, limpando os alertas de sessao fechada abruptamente
+    cat << 'PY_EOF' > "$HOME/.tatico/clear_chrome_session.py"
+import json, os, shutil
+paths = [os.path.expanduser('~/.config/google-chrome/Default'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default')]
+for p in paths:
+    for f in ['Sessions', 'Session Storage', 'Crashpad']:
+        dp = os.path.join(p, f)
+        if os.path.exists(dp):
+            try: shutil.rmtree(dp) if os.path.isdir(dp) else os.remove(dp)
+            except: pass
+    pref = os.path.join(p, 'Preferences')
+    if os.path.exists(pref):
+        try:
+            with open(pref, 'r', encoding='utf-8') as f: d = json.load(f)
+            if 'profile' not in d: d['profile'] = {}
+            d['profile']['exit_type'] = 'Normal'
+            d['profile']['exited_cleanly'] = True
+            with open(pref, 'w', encoding='utf-8') as f: json.dump(d, f)
+        except: pass
+PY_EOF
+    chmod +x "$HOME/.tatico/clear_chrome_session.py"
 
     python3 -c "
 import json, os
@@ -289,7 +311,9 @@ After=graphical-session.target
 [Service]
 Type=simple
 KillMode=none
-ExecStartPre=/bin/bash -c "killall -9 chrome google-chrome google-chrome-stable 2>/dev/null || true; sleep 2; rm -rf $HOME/.config/google-chrome/Default/Sessions/* $HOME/snap/google-chrome/current/.config/google-chrome/Default/Sessions/* 2>/dev/null || true; sed -i 's/\"exit_type\":\"Crashed\"/\"exit_type\":\"Normal\"/g' $HOME/.config/google-chrome/Default/Preferences $HOME/snap/google-chrome/current/.config/google-chrome/Default/Preferences 2>/dev/null || true; sed -i 's/\"exited_cleanly\":false/\"exited_cleanly\":true/g' $HOME/.config/google-chrome/Default/Preferences $HOME/snap/google-chrome/current/.config/google-chrome/Default/Preferences 2>/dev/null || true; sleep 10"
+ExecStartPre=/bin/bash -c "killall -9 chrome google-chrome google-chrome-stable 2>/dev/null || true; sleep 2"
+ExecStartPre=/usr/bin/python3 %h/.tatico/clear_chrome_session.py
+ExecStartPre=/bin/bash -c "sleep 10"
 ExecStart=$bin $chrome_flags "$url"
 ExecStartPost=/bin/bash -c "sleep 8; wmctrl -r 'Google Chrome' -b add,above || true"
 Restart=always
