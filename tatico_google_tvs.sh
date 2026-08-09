@@ -188,7 +188,7 @@ except Exception:
     sys.exit(1)
 
 if acao == 'install':
-    p_nome = 'TVS Padaria' if tv == 'padaria' else 'TVs Açougue'
+    p_nome = 'TVs Padaria' if tv == 'padaria' else 'TVs Açougue'
     p_id = next((p['id'] for p in data.get('perfis', []) if re.search(p_nome, p.get('nome', ''), re.IGNORECASE)), '')
 
     tv_upper = 'PADARIA' if tv == 'padaria' else 'AÇOUGUE'
@@ -199,7 +199,7 @@ if acao == 'install':
         r = data['rotinas'][0]
         r['nome'] = r_nome
         r['perfil_id'] = p_id
-        r['autorefresh_ativo'] = True
+        r['autorefresh'] = True
         r['autorefresh_min'] = 60
         if len(r.get('passos_avancados', [])) > 1:
             r['passos_avancados'][1]['parada_seletor'] = loja
@@ -215,7 +215,7 @@ elif acao == 'config':
             r['passos_avancados'][1]['parada_seletor'] = loja
 
     if link and tv:
-        p_nome = 'TVS Padaria' if tv == 'padaria' else 'TVs Açougue'
+        p_nome = 'TVs Padaria' if tv == 'padaria' else 'TVs Açougue'
         for p in data.get('perfis', []):
             if re.search(p_nome, p.get('nome', ''), re.IGNORECASE):
                 if p.get('urls_alvo'):

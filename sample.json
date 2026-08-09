@@ -46,7 +46,7 @@
     {
       "acionar_revolver": false,
       "ativa": true,
-      "autorefresh_ativo": false,
+      "autorefresh": false,
       "autorefresh_min": 1,
       "autorefresh_seg": 0,
       "condicao_parada": {
