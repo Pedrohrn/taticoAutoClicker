@@ -43,6 +43,27 @@ function aplicarEstadoVazio(data) {
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  // inicializando engine de tema para sincronia com aba de config
+  const applyTheme = (theme) => document.documentElement.setAttribute('data-theme', theme);
+  chrome.storage.local.get(['theme'], (res) => {
+    const defaultTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    applyTheme(res.theme || defaultTheme);
+  });
+
+  // adicionando observador de pílula de tema injetada via config para refletir globalmente
+  document.addEventListener('click', (e) => {
+    const themeSwitch = e.target.closest('.theme-switch');
+    if (themeSwitch) {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+        (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      chrome.storage.local.set({ theme: isDark ? 'light' : 'dark' });
+    }
+  });
+
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local' && changes.theme) applyTheme(changes.theme.newValue);
+  });
+
   // aguardo o carregamento de estado mestre antes de inicializar as views dos submodulos
   garantirEstadoInicial(() => {
     initProfiles();
