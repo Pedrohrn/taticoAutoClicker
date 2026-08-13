@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const btnToggleRevolver = document.getElementById('btnToggleRevolver');
   const btnToggleAutoClicker = document.getElementById('btnToggleAutoClicker');
+  const btnToggleAutoRefresh = document.getElementById('btnToggleAutoRefresh');
   const btnToggleStatusBar = document.getElementById('btnToggleStatusBar');
   const btnOpcoes = document.getElementById('btnOpcoes');
 
@@ -12,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // resolvo o estado inicial
-  chrome.storage.local.get(['theme', 'statusBarClosed', 'autoClickerPaused', 'rotinaAtualNome'], (res) => {
+  chrome.storage.local.get(['theme', 'statusBarClosed', 'autoClickerPaused', 'autoRefreshPaused', 'rotinaAtualNome'], (res) => {
     const temaPadrao = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     aplicarTema(res.theme || temaPadrao);
     textoRotinaAtual.textContent = res.rotinaAtualNome || "Nenhuma";
@@ -33,6 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         btnToggleAutoClicker.textContent = "Pausar AutoClicker";
         btnToggleAutoClicker.className = "btn btn-secondary btn-block";
+      }
+    }
+
+    if (estado.autoRefreshPaused !== undefined) {
+      if (estado.autoRefreshPaused) {
+        btnToggleAutoRefresh.textContent = "Retomar AutoRefresh";
+        btnToggleAutoRefresh.className = "btn btn-success btn-block";
+      } else {
+        btnToggleAutoRefresh.textContent = "Pausar AutoRefresh";
+        btnToggleAutoRefresh.className = "btn btn-secondary btn-block";
       }
     }
 
@@ -70,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (changes.theme) aplicarTema(changes.theme.newValue);
       if (changes.revolverAtivo || changes.playlistIdAtiva) atualizarStatusRevolver();
       if (changes.autoClickerPaused) atualizarUiBotoes({ autoClickerPaused: changes.autoClickerPaused.newValue });
+      if (changes.autoRefreshPaused) atualizarUiBotoes({ autoRefreshPaused: changes.autoRefreshPaused.newValue });
       if (changes.statusBarClosed) atualizarUiBotoes({ statusBarClosed: changes.statusBarClosed.newValue });
       if (changes.rotinaAtualNome) textoRotinaAtual.textContent = changes.rotinaAtualNome.newValue || "Nenhuma";
     }
@@ -85,6 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
   btnToggleAutoClicker.addEventListener('click', () => {
     chrome.storage.local.get(['autoClickerPaused'], (res) => {
       chrome.storage.local.set({ autoClickerPaused: !res.autoClickerPaused });
+    });
+  });
+
+  btnToggleAutoRefresh.addEventListener('click', () => {
+    chrome.storage.local.get(['autoRefreshPaused'], (res) => {
+      chrome.storage.local.set({ autoRefreshPaused: !res.autoRefreshPaused });
     });
   });
 

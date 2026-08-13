@@ -8,6 +8,7 @@ class TaticoStatusBarUI {
       fechada: false,
       minimizada: false,
       autoClickerPaused: false,
+      autoRefreshPaused: false,
       revolverAtivo: false,
       passoAtual: 0,
       passoTotal: 0,
@@ -18,13 +19,14 @@ class TaticoStatusBarUI {
 
   async inicializar(nomeRotinaAtiva) {
     chrome.storage.local.set({ rotinaAtualNome: nomeRotinaAtiva || "Ativa" });
-    const res = await chrome.storage.local.get(['statusBarPos', 'statusBarCoords', 'statusBarMinimized', 'statusBarClosed', 'autoClickerPaused', 'revolverAtivo']);
+    const res = await chrome.storage.local.get(['statusBarPos', 'statusBarCoords', 'statusBarMinimized', 'statusBarClosed', 'autoClickerPaused', 'autoRefreshPaused', 'revolverAtivo']);
 
     this.posicao = res.statusBarPos || 'bottom-center';
     this.coords = res.statusBarCoords || null;
     this.estado.minimizada = !!res.statusBarMinimized;
     this.estado.fechada = !!res.statusBarClosed;
     this.estado.autoClickerPaused = !!res.autoClickerPaused;
+    this.estado.autoRefreshPaused = !!res.autoRefreshPaused;
     this.estado.revolverAtivo = !!res.revolverAtivo;
 
     this.construirDOM();
@@ -88,6 +90,9 @@ class TaticoStatusBarUI {
         <button id="tsb-btn-ac" class="tsb-btn" title="Alternar AutoClicker">
           ${this.estado.autoClickerPaused ? '\u25B6 AC' : '\u23F8 AC'}
         </button>
+        <button id="tsb-btn-ar" class="tsb-btn" title="Alternar AutoRefresh">
+          ${this.estado.autoRefreshPaused ? '\u25B6 AR' : '\u23F8 AR'}
+        </button>
         <button id="tsb-btn-rev" class="tsb-btn" title="Alternar Revolver">
           ${this.estado.revolverAtivo ? '\u23F8 REV' : '\u25B6 REV'}
         </button>
@@ -142,6 +147,10 @@ class TaticoStatusBarUI {
   bindEventosInternos() {
     document.getElementById('tsb-btn-ac')?.addEventListener('click', () => {
       chrome.storage.local.set({ autoClickerPaused: !this.estado.autoClickerPaused });
+    });
+
+    document.getElementById('tsb-btn-ar')?.addEventListener('click', () => {
+      chrome.storage.local.set({ autoRefreshPaused: !this.estado.autoRefreshPaused });
     });
 
     document.getElementById('tsb-btn-rev')?.addEventListener('click', () => {
@@ -256,6 +265,9 @@ class TaticoStatusBarUI {
         if (changes.autoClickerPaused) {
           this.estado.autoClickerPaused = !!changes.autoClickerPaused.newValue; mudouUi = true;
         }
+        if (changes.autoRefreshPaused) {
+          this.estado.autoRefreshPaused = !!changes.autoRefreshPaused.newValue; mudouUi = true;
+        }
         if (changes.revolverAtivo) {
           this.estado.revolverAtivo = !!changes.revolverAtivo.newValue; mudouUi = true;
         }
@@ -345,13 +357,20 @@ async function executarRotinaAvancada(rotina) {
   if (rotina.autorefresh && (rotina.autorefresh_min > 0 || rotina.autorefresh_seg > 0)) {
     const timeMs = ((rotina.autorefresh_min || 0) * 60 + (rotina.autorefresh_seg || 0)) * 1000;
     console.log(`A página será automáticamente recarregada em ${rotina.autorefresh_min}:${rotina.autorefresh_seg}`);
-    refreshTimer = setTimeout(() => { location.reload(); }, timeMs);
 
     let counterMs = timeMs;
-    setInterval(() => {
-      if (counterMs > 0 && !window.taticoUI.estado.autoClickerPaused) {
+
+    // isolo a rotina em intervalo para que ele consiga ser evitado pelo estado unificado autoRefreshPaused
+    refreshTimer = setInterval(() => {
+      if (counterMs > 0 && !window.taticoUI.estado.autoRefreshPaused) {
         counterMs -= 5000;
-        if (counterMs < 0) counterMs = 0;
+
+        if (counterMs <= 0) {
+          clearInterval(refreshTimer);
+          location.reload();
+          return;
+        }
+
         const mm = Math.floor(counterMs / 60000);
         const ss = Math.floor((counterMs % 60000) / 1000);
         const txt = `${mm}:${ss.toString().padStart(2, '0')}`;
