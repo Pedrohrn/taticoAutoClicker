@@ -18,6 +18,29 @@ export function initRevolver() {
   function renderizarLista(isGlobalActive, activeId) {
     body.innerHTML = '';
 
+    // injetando botao global de play/pause dinamicamente se ainda nao existir na view
+    let btnGlobal = document.getElementById('btnToggleRevolverGlobal');
+    if (!btnGlobal) {
+      const btnNova = document.getElementById('btnNovaPlaylist');
+      if (btnNova) {
+        btnGlobal = document.createElement('button');
+        btnGlobal.id = 'btnToggleRevolverGlobal';
+        btnNova.insertAdjacentElement('afterend', btnGlobal);
+
+        btnGlobal.addEventListener('click', () => {
+          chrome.storage.local.get(['revolverAtivo'], res => {
+            chrome.storage.local.set({ revolverAtivo: !res.revolverAtivo });
+          });
+        });
+      }
+    }
+
+    if (btnGlobal) {
+      btnGlobal.className = `btn btn-sm ${isGlobalActive ? 'btn-danger' : 'btn-success'}`;
+      btnGlobal.style.marginLeft = '10px';
+      btnGlobal.textContent = isGlobalActive ? '⏸ Pausar Todos' : '▶ Iniciar Revólver';
+    }
+
     if (playlistsSalvas.length === 0) {
       body.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Nenhuma playlist cadastrada.</td></tr>`;
       return;
@@ -26,18 +49,33 @@ export function initRevolver() {
     playlistsSalvas.forEach(pl => {
       const isRunning = isGlobalActive && (activeId === pl.id);
       const tr = document.createElement('tr');
+      // adotei icones puros para otimizar layout sem espremer as colunas e inseri classe de wrap
       tr.innerHTML = `
         <td>${pl.nome || 'Sem Nome'}</td>
         <td style="color: ${isRunning ? 'var(--success)' : 'var(--text-muted)'}; font-weight: bold;">
           ${isRunning ? 'Executando' : 'Parada'}
         </td>
         <td style="text-align: center;">
-          <button class="btn btn-sm btn-info btn-editar-pl" data-id="${pl.id}">Edit</button>
-          <button class="btn btn-sm btn-danger btn-excluir-pl" data-id="${pl.id}">Del</button>
+          <div class="action-buttons">
+            <button class="btn btn-sm btn-secondary btn-toggle-pl" data-id="${pl.id}" title="${isRunning ? 'Pausar' : 'Rodar'}">${isRunning ? '⏸' : '▶'}</button>
+            <button class="btn btn-sm btn-info btn-editar-pl" data-id="${pl.id}" title="Editar">✎</button>
+            <button class="btn btn-sm btn-danger btn-excluir-pl" data-id="${pl.id}" title="Excluir">🗑</button>
+          </div>
         </td>
       `;
       body.appendChild(tr);
     });
+
+    document.querySelectorAll('.btn-toggle-pl').forEach(b => b.addEventListener('click', e => {
+      const id = e.target.dataset.id;
+      chrome.storage.local.get(['revolverAtivo', 'playlistIdAtiva'], res => {
+        if (res.revolverAtivo && res.playlistIdAtiva === id) {
+          chrome.storage.local.set({ revolverAtivo: false });
+        } else {
+          chrome.storage.local.set({ revolverAtivo: true, playlistIdAtiva: id });
+        }
+      });
+    }));
 
     document.querySelectorAll('.btn-editar-pl').forEach(b => b.addEventListener('click', e => abrirEdicao(e.target.dataset.id)));
     document.querySelectorAll('.btn-excluir-pl').forEach(b => b.addEventListener('click', e => {
@@ -88,15 +126,22 @@ export function initRevolver() {
     }
 
     pl.itens.forEach((it, idx) => {
+      const isAberto = it.aberto ? '<span style="color:var(--success); font-size:0.8em; margin-left:5px;">(Aberto)</span>' : '';
       const tr = document.createElement('tr');
+      // garantindo que os inputs temporais nunca serao esmagados via flex-shrink na classe .flex-row-inputs
       tr.innerHTML = `
         <td style="text-align:center;"><input type="checkbox" class="chk-item-revolver" data-idx="${idx}"></td>
         <td>${idx + 1}</td>
-        <td><input type="url" class="item-url" value="${it.url}"></td>
-        <td><div class="flex-row" style="flex-wrap: nowrap;"><input type="number" class="item-min" value="${it.minutos}" style="width:50px;"><input type="number" class="item-seg" value="${it.segundos}" style="width:50px;"></div></td>
+        <td><input type="text" class="item-url input-no-shrink" value="${it.url}" placeholder="https://... ou wildcard *">${isAberto}</td>
+        <td>
+          <div class="flex-row" style="flex-wrap: nowrap;">
+            <input type="number" class="item-min input-no-shrink" value="${it.minutos}" style="width:60px;">
+            <input type="number" class="item-seg input-no-shrink" value="${it.segundos}" style="width:60px;">
+          </div>
+        </td>
         <td style="text-align:center;"><input type="checkbox" class="item-ativo" ${it.ativo ? 'checked' : ''}></td>
         <td style="text-align:center;"><input type="radio" name="item-principal" ${it.principal ? 'checked' : ''}></td>
-        <td style="text-align:center;"><button class="btn-danger-sm btn-remover-item" data-idx="${idx}">X</button></td>
+        <td style="text-align:center;"><button class="btn-danger-sm btn-remover-item" data-idx="${idx}" title="Excluir">X</button></td>
       `;
       tbody.appendChild(tr);
     });
@@ -113,12 +158,13 @@ export function initRevolver() {
     if (!pl) return;
     pl.nome = document.getElementById('inputNomePlaylist').value;
     const linhas = document.querySelectorAll('#playlistItensBody tr:not(:has(td[colspan]))');
-    pl.itens = Array.from(linhas).map(tr => ({
+    pl.itens = Array.from(linhas).map((tr, idx) => ({
       url: tr.querySelector('.item-url').value,
       minutos: parseInt(tr.querySelector('.item-min').value, 10) || 0,
       segundos: parseInt(tr.querySelector('.item-seg').value, 10) || 0,
       ativo: tr.querySelector('.item-ativo').checked,
-      principal: tr.querySelector('input[name="item-principal"]').checked
+      principal: tr.querySelector('input[name="item-principal"]').checked,
+      aberto: pl.itens[idx]?.aberto || false
     }));
   }
 
@@ -133,7 +179,8 @@ export function initRevolver() {
             minutos: 0,
             segundos: 15,
             ativo: true,
-            principal: false
+            principal: false,
+            aberto: false
           });
         }
       });
@@ -177,7 +224,7 @@ export function initRevolver() {
   document.getElementById('btnAdicionarItemRevolver').addEventListener('click', () => {
     sincronizarDom();
     const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
-    pl.itens.push({ url: '', minutos: 0, segundos: 10, ativo: true, principal: pl.itens.length === 0 });
+    pl.itens.push({ url: '', minutos: 0, segundos: 10, ativo: true, principal: pl.itens.length === 0, aberto: false });
     renderizarItens();
   });
 
@@ -189,9 +236,14 @@ export function initRevolver() {
   });
 
   chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && (changes.revolverAtivo || changes.playlistIdAtiva)) {
+    if (namespace === 'local' && (changes.revolverAtivo || changes.playlistIdAtiva || changes.playlists)) {
       if (document.getElementById('listaPlaylistsContainer').classList.contains('hidden') === false) {
         carregarPlaylists();
+      } else if (changes.playlists && playlistEmEdicaoId) {
+        // caso o background altere os itens pra aberto em real time
+        playlistsSalvas = changes.playlists.newValue || [];
+        sincronizarDom();
+        renderizarItens();
       }
     }
   });
