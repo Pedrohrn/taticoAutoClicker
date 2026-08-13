@@ -7,9 +7,7 @@ REPO_RAW_URL="https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/
 
 mkdir -p "$TK_DIR"
 
-# MÓDULO 1: GERADOR DE COMANDOS E INTERAÇÃO
 # escrevendo as funcoes no disco de forma independente
-
 cat << 'EOF' > "$TK_RC"
 function _tk_timeout() {
     local status=$1
@@ -29,48 +27,73 @@ function _tk_timeout() {
         ((s--))
     done
     echo -ne "\rterminal fechando agora.\033[0K\n"
-    kill -9 $(ps -o ppid= -p $PPID) $PPID $$ 2>/dev/null
+    # restringindo o kill apenas ao processo pai imediato e ao proprio shell
+    kill -9 $PPID $$ 2>/dev/null
 }
 
 # iniciando o fluxo interativo que invoca o modulo 2
 function instalar_tk() {
-    local tv_opt="" loja_opt="" tv_str="" loja_str=""
+    local tv_opt="" loja_opt="" tv_str="" loja_str="" serv_opt="" serv_str="sim"
 
     while true; do
-        read -p "Qual é o tipo de TV? (1 - Padaria, 2 - Açougue - digite somente o número): " < /dev/tty tv_opt
+        read -p "Qual é o tipo de TV? (1 - Padaria, 2 - Açougue, 3 - Outras - digite somente o número): " tv_opt < /dev/tty
         case "$tv_opt" in
             1) tv_str="padaria"; break ;;
             2) tv_str="acougue"; break ;;
+            3) tv_str="outras"; break ;;
             *) echo "opção inválida. tente novamente." ;;
         esac
     done
+
+    # skippando a selecao de loja se for uma tv do tipo "outras"
+    if [ "$tv_str" != "outras" ]; then
+        while true; do
+            read -p "Qual é a loja? (1-CENTRO, 2-GARAVELO, 3-T7, 4-CAMPINAS, 5-PORTAL, 6-PAPILLON - digite somente o número): " loja_opt < /dev/tty
+            case "$loja_opt" in
+                1) loja_str="CENTRO"; break ;;
+                2) loja_str="GARAVELO"; break ;;
+                3) loja_str="T7"; break ;;
+                4) loja_str="CAMPINAS"; break ;;
+                5) loja_str="PORTAL"; break ;;
+                6) loja_str="PAPILLON"; break ;;
+                *) echo "opção inválida. tente novamente." ;;
+            esac
+        done
+    else
+        loja_str="OUTRAS"
+    fi
 
     while true; do
-        read -p "Qual é a loja? (1-CENTRO, 2-GARAVELO, 3-T7, 4-CAMPINAS, 5-PORTAL, 6-PAPILLON - digite somente o número): " < /dev/tty loja_opt
-        case "$loja_opt" in
-            1) loja_str="CENTRO"; break ;;
-            2) loja_str="GARAVELO"; break ;;
-            3) loja_str="T7"; break ;;
-            4) loja_str="CAMPINAS"; break ;;
-            5) loja_str="PORTAL"; break ;;
-            6) loja_str="PAPILLON"; break ;;
+        read -p "Deseja instalar os serviços de inicialização automática e persistente do Chrome? (S/n): " serv_opt < /dev/tty
+        serv_opt=${serv_opt:-S}
+        case "${serv_opt^^}" in
+            S) serv_str="sim"; break ;;
+            N) serv_str="nao"; break ;;
             *) echo "opção inválida. tente novamente." ;;
         esac
     done
 
-    bash "$HOME/.tatico/tatico_core.sh" --acao install --tv "$tv_str" --loja "$loja_str"
+    bash "$HOME/.tatico/tatico_core.sh" --acao install --tv "$tv_str" --loja "$loja_str" --servicos "$serv_str"
     _tk_timeout $?
 }
 
 # atualizando somente a logica de bashrc e do core, sem afetar o json/systemd
 function atualizar_comandos_tk() {
     echo "baixando comandos mais recentes..."
-    curl -sL "https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh" | bash -s -- --only-cmds
-    local status=$?
-    if [ "$status" -eq 0 ]; then
-        source "$HOME/.tatico/bashrc_aliases"
-        echo "comandos e core atualizados com sucesso."
+    # arquivo temporario para garantir execucao apenas se o arquivo remoto for obtido com sucesso
+    local tmp_file=$(mktemp)
+    if curl -sL "https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh" -o "$tmp_file"; then
+        bash "$tmp_file" --only-cmds
+        local status=$?
+        if [ "$status" -eq 0 ]; then
+            source "$HOME/.tatico/bashrc_aliases"
+            echo "comandos e core atualizados com sucesso."
+        fi
+    else
+        echo "erro: falha ao baixar o script remoto."
+        local status=1
     fi
+    rm -f "$tmp_file"
     _tk_timeout $status
 }
 
@@ -89,13 +112,20 @@ function configurar_tk() {
             --tipo_tv) tv="$2"; shift 2 ;;
             --loja) loja="$2"; shift 2 ;;
             --link) link="$2"; shift 2 ;;
-            *) echo "erro: flag desconhecida $1"; return 1 ;;
+            *) echo "Erro: Flag desconhecida $1"; return 1 ;;
         esac
     done
 
     if [ -n "$link" ] && [ -z "$tv" ]; then
-        echo "erro: ao informar --link, a flag --tipo_tv é obrigatória."
+        echo "Erro: Ao informar --link, a flag --tipo_tv é obrigatória."
         return 1
+    fi
+
+    if [ -n "$loja" ]; then
+        if [[ ! "$loja" =~ ^(CENTRO|GARAVELO|T7|CAMPINAS|PORTAL|PAPILLON|OUTRAS)$ ]]; then
+            echo "Erro: A loja informada é inválida."
+            return 1
+        fi
     fi
 
     bash "$HOME/.tatico/tatico_core.sh" --acao config --tv "$tv" --loja "$loja" --link "$link"
@@ -124,7 +154,7 @@ function resumir_tk() {
 
 # limpando processos zumbis e reiniciando o servico master
 function reiniciar_tk() {
-    killall -9 chrome google-chrome google-chrome-stable 2>/dev/null || true
+    killall -9 google-chrome google-chrome-stable 2>/dev/null || true
     sleep 2
     systemctl --user restart tatico-chrome.service
     local status=$?
@@ -141,9 +171,7 @@ if ! grep -q "source $TK_RC" "$HOME/.bashrc"; then
     echo -e "\n# Tatico AutoClicker Kiosk\nsource $TK_RC" >> "$HOME/.bashrc"
 fi
 
-# MÓDULO 2
 # isolando o script para nao rodar desnecessariamente
-
 cat << 'EOF' > "$TK_SCRIPT"
 #!/bin/bash
 
@@ -153,7 +181,7 @@ if ! command -v git &> /dev/null || ! command -v wmctrl &> /dev/null || ! comman
     sudo apt-get install -y git wmctrl python3 > /dev/null 2>&1
 fi
 
-acao="" tv="" loja="" link=""
+acao="" tv="" loja="" link="" servicos="sim"
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
@@ -161,6 +189,7 @@ while [[ "$#" -gt 0 ]]; do
         --tv) tv="$2"; shift 2 ;;
         --loja) loja="$2"; shift 2 ;;
         --link) link="$2"; shift 2 ;;
+        --servicos) servicos="$2"; shift 2 ;;
         *) shift ;;
     esac
 done
@@ -170,14 +199,20 @@ repo_dir="$ext_dir/taticoAutoClicker"
 repo_url="https://github.com/Pedrohrn/taticoAutoClicker.git"
 
 function _tk_processar_json() {
+    export TK_ACAO="$acao"
+    export TK_TV="$tv"
+    export TK_LOJA="$loja"
+    export TK_LINK="$link"
+    export TK_REPO="$repo_dir"
+
     python3 -c "
 import json, sys, re, os
 
-acao = '$acao'
-tv = '$tv'
-loja = '$loja'
-link = '$link'
-repo = '$repo_dir'
+acao = os.environ.get('TK_ACAO', '')
+tv = os.environ.get('TK_TV', '')
+loja = os.environ.get('TK_LOJA', '')
+link = os.environ.get('TK_LINK', '')
+repo = os.environ.get('TK_REPO', '')
 
 c_path = os.path.join(repo, 'config.json')
 
@@ -188,24 +223,26 @@ except Exception:
     sys.exit(1)
 
 if acao == 'install':
-    p_nome = 'TVs Padaria' if tv == 'padaria' else 'TVs Açougue'
-    p_id = next((p['id'] for p in data.get('perfis', []) if re.search(p_nome, p.get('nome', ''), re.IGNORECASE)), '')
+    if tv != 'outras':
+        p_nome = 'TVs Padaria' if tv == 'padaria' else 'TVs Açougue'
+        p_id = next((p['id'] for p in data.get('perfis', []) if re.search(p_nome, p.get('nome', ''), re.IGNORECASE)), None)
 
-    tv_upper = 'PADARIA' if tv == 'padaria' else 'AÇOUGUE'
-    r_nome = f'{tv_upper} {loja}'
+        tv_upper = 'PADARIA' if tv == 'padaria' else 'AÇOUGUE'
+        r_nome = f'{tv_upper} {loja}'
 
-    data['rotinaAtualNome'] = r_nome
-    if data.get('rotinas'):
-        r = data['rotinas'][0]
-        r['nome'] = r_nome
-        r['perfil_id'] = p_id
-        r['autorefresh'] = True
-        r['autorefresh_min'] = 60
-        if len(r.get('passos_avancados', [])) > 1:
-            r['passos_avancados'][1]['parada_seletor'] = loja
+        data['rotinaAtualNome'] = r_nome
+        if data.get('rotinas'):
+            r = data['rotinas'][0]
+            r['nome'] = r_nome
+            if p_id:
+                r['perfil_id'] = p_id
+            r['autorefresh'] = True
+            r['autorefresh_min'] = 60
+            if len(r.get('passos_avancados', [])) > 1:
+                r['passos_avancados'][1]['parada_seletor'] = loja
 
 elif acao == 'config':
-    if loja and data.get('rotinas'):
+    if loja and data.get('rotinas') and tv != 'outras':
         r = data['rotinas'][0]
         prefixo = r['nome'].split()[0] if r.get('nome') else ''
         n_nome = f'{prefixo} {loja}'.strip()
@@ -214,7 +251,7 @@ elif acao == 'config':
         if len(r.get('passos_avancados', [])) > 1:
             r['passos_avancados'][1]['parada_seletor'] = loja
 
-    if link and tv:
+    if link and tv and tv != 'outras':
         p_nome = 'TVs Padaria' if tv == 'padaria' else 'TVs Açougue'
         for p in data.get('perfis', []):
             if re.search(p_nome, p.get('nome', ''), re.IGNORECASE):
@@ -227,7 +264,7 @@ with open(c_path, 'w', encoding='utf-8') as f:
 }
 
 # configurando ambiente de servicos assincronos e verificando o executavel do chrome
-function _tk_configurar_systemd() {
+function _tk_configurar_ambiente() {
     local bin=""
     for p in "/usr/bin/google-chrome-stable" "/usr/bin/google-chrome" "/opt/google/chrome/google-chrome" "/snap/bin/google-chrome"; do
         if [ -x "$p" ]; then
@@ -240,35 +277,15 @@ function _tk_configurar_systemd() {
         bin=$(command -v google-chrome-stable || command -v google-chrome || echo "/usr/bin/google-chrome-stable")
     fi
 
-    local url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))")
+    # se a tv for 'outras', envio url vazia pra aproveitar a capacidade do chrome de restaurar sessoes pre-existentes
+    local url=""
+    if [ "$tv" != "outras" ]; then
+        url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))" 2>/dev/null)
+    fi
 
     local chrome_flags="--start-fullscreen --disable-print-preview --kiosk-printing --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --password-store=basic --use-mock-keychain --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' --metrics-recording-only --disable-sync --disable-background-networking --disable-prompt-on-repost --disable-client-side-phishing-detection --disable-component-update --disable-features=Translate,TranslateUI,OptimizationHints,MediaRouter,DialMediaRouteProvider,CalculateNativeWinOcclusion,CertificateTransparencyComponentUpdater,AutofillServerCommunication,PrivacySandboxSettings4 --load-extension=$repo_dir"
 
-    local sd_dir="$HOME/.config/systemd/user"
-    mkdir -p "$sd_dir"
-
-    # isso vai garantir que chrome inicie de maneira limpa, limpando os alertas de sessao fechada abruptamente
-    cat << 'PY_EOF' > "$HOME/.tatico/clear_chrome_session.py"
-import json, os, shutil
-paths = [os.path.expanduser('~/.config/google-chrome/Default'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default')]
-for p in paths:
-    for f in ['Sessions', 'Session Storage', 'Crashpad']:
-        dp = os.path.join(p, f)
-        if os.path.exists(dp):
-            try: shutil.rmtree(dp) if os.path.isdir(dp) else os.remove(dp)
-            except: pass
-    pref = os.path.join(p, 'Preferences')
-    if os.path.exists(pref):
-        try:
-            with open(pref, 'r', encoding='utf-8') as f: d = json.load(f)
-            if 'profile' not in d: d['profile'] = {}
-            d['profile']['exit_type'] = 'Normal'
-            d['profile']['exited_cleanly'] = True
-            with open(pref, 'w', encoding='utf-8') as f: json.dump(d, f)
-        except: pass
-PY_EOF
-    chmod +x "$HOME/.tatico/clear_chrome_session.py"
-
+    # forco modo desenvolvedor e habilito a continuacao da sessao ativa se o tipo for 'outras'
     python3 -c "
 import json, os
 
@@ -284,47 +301,80 @@ for p in paths:
         exts = data.setdefault('extensions', {})
         exts.setdefault('ui', {})['developer_mode'] = True
 
+        if '$tv' == 'outras':
+            data.setdefault('session', {})['restore_on_startup'] = 1
+
         with open(p, 'w', encoding='utf-8') as f:
             json.dump(data, f)
     except Exception:
         pass
 "
 
-    local desk_path="$HOME/.local/share/applications/google-chrome.desktop"
-    mkdir -p "$HOME/.local/share/applications"
-    if [ -f "/usr/share/applications/google-chrome.desktop" ]; then
-        cp "/usr/share/applications/google-chrome.desktop" "$desk_path"
-    elif [ -f "/var/lib/snapd/desktop/applications/google-chrome_google-chrome.desktop" ]; then
-        cp "/var/lib/snapd/desktop/applications/google-chrome_google-chrome.desktop" "$desk_path"
-    fi
+    # configuracoes de desktop e systemd somente se o usuario solicitou
+    if [ "$servicos" == "sim" ]; then
+        local sd_dir="$HOME/.config/systemd/user"
+        mkdir -p "$sd_dir"
 
-    if [ -f "$desk_path" ]; then
-        sed -i "s|^Exec=.*|Exec=$bin $chrome_flags %U|g" "$desk_path"
-        update-desktop-database "$HOME/.local/share/applications" &>/dev/null || true
-    fi
+        # se a tv for do tipo 'outras' eu faco skip da remocao das pastas de Sessions do chrome pra possibilitar a reabertura
+        cat << 'PY_EOF' > "$HOME/.tatico/clear_chrome_session.py"
+import json, os, shutil
+tv_type = os.environ.get('TK_TV_TYPE', 'padaria')
+paths = [os.path.expanduser('~/.config/google-chrome/Default'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default')]
+for p in paths:
+    if tv_type != 'outras':
+        for f in ['Sessions', 'Session Storage', 'Crashpad']:
+            dp = os.path.join(p, f)
+            if os.path.exists(dp):
+                try: shutil.rmtree(dp) if os.path.isdir(dp) else os.remove(dp)
+                except: pass
+    pref = os.path.join(p, 'Preferences')
+    if os.path.exists(pref):
+        try:
+            with open(pref, 'r', encoding='utf-8') as f: d = json.load(f)
+            if 'profile' not in d: d['profile'] = {}
+            d['profile']['exit_type'] = 'Normal'
+            d['profile']['exited_cleanly'] = True
+            with open(pref, 'w', encoding='utf-8') as f: json.dump(d, f)
+        except: pass
+PY_EOF
+        chmod +x "$HOME/.tatico/clear_chrome_session.py"
 
-    cat <<SYS_EOF > "$sd_dir/tatico-chrome.service"
+        local desk_path="$HOME/.local/share/applications/google-chrome.desktop"
+        mkdir -p "$HOME/.local/share/applications"
+        if [ -f "/usr/share/applications/google-chrome.desktop" ]; then
+            cp "/usr/share/applications/google-chrome.desktop" "$desk_path"
+        elif [ -f "/var/lib/snapd/desktop/applications/google-chrome_google-chrome.desktop" ]; then
+            cp "/var/lib/snapd/desktop/applications/google-chrome_google-chrome.desktop" "$desk_path"
+        fi
+
+        if [ -f "$desk_path" ]; then
+            sed -i "s|^Exec=.*|Exec=$bin $chrome_flags %U|g" "$desk_path"
+            update-desktop-database "$HOME/.local/share/applications" &>/dev/null || true
+        fi
+
+        cat <<SYS_EOF > "$sd_dir/tatico-chrome.service"
 [Unit]
 Description=Tatico Chrome Fullscreen
 After=graphical-session.target
 
 [Service]
 Type=simple
-KillMode=none
-ExecStartPre=/bin/bash -c "killall -9 chrome google-chrome google-chrome-stable 2>/dev/null || true; sleep 2"
+KillMode=mixed
+Environment=TK_TV_TYPE=$tv
+Environment=DISPLAY=${DISPLAY:-:0}
+ExecStartPre=/bin/bash -c "killall -9 google-chrome google-chrome-stable 2>/dev/null || true; sleep 2"
 ExecStartPre=/usr/bin/python3 %h/.tatico/clear_chrome_session.py
 ExecStartPre=/bin/bash -c "sleep 10"
 ExecStart=$bin $chrome_flags "$url"
 ExecStartPost=/bin/bash -c "sleep 8; wmctrl -r 'Google Chrome' -b add,above || true"
 Restart=always
 RestartSec=10
-Environment=DISPLAY=:0
 
 [Install]
 WantedBy=default.target
 SYS_EOF
 
-    cat <<SYS_EOF > "$sd_dir/tatico-chrome-restart.service"
+        cat <<SYS_EOF > "$sd_dir/tatico-chrome-restart.service"
 [Unit]
 Description=Restart Kiosk Service
 
@@ -333,7 +383,7 @@ Type=oneshot
 ExecStart=/usr/bin/systemctl --user restart tatico-chrome.service
 SYS_EOF
 
-    cat <<SYS_EOF > "$sd_dir/tatico-chrome-restart.timer"
+        cat <<SYS_EOF > "$sd_dir/tatico-chrome-restart.timer"
 [Unit]
 Description=Timer Tatico Restart Kiosk Diario
 
@@ -345,14 +395,17 @@ Persistent=true
 WantedBy=timers.target
 SYS_EOF
 
-    systemctl --user daemon-reload
-    systemctl --user enable tatico-chrome.service
-    systemctl --user enable --now tatico-chrome-restart.timer
+        systemctl --user daemon-reload
+        systemctl --user enable tatico-chrome.service
+        systemctl --user enable --now tatico-chrome-restart.timer
+    else
+        echo "instalação de serviços persistentes skippada. modo desenvolvedor ativado."
+    fi
 }
 
 case "$acao" in
     install)
-        killall -9 chrome google-chrome google-chrome-stable 2>/dev/null || true
+        killall -9 google-chrome google-chrome-stable 2>/dev/null || true
         sleep 2
 
         mkdir -p "$ext_dir"
@@ -367,9 +420,11 @@ case "$acao" in
         cp -f "$repo_dir/sample_config.json" "$repo_dir/config.json" 2>/dev/null || cp -f "$repo_dir/sample.json" "$repo_dir/config.json" 2>/dev/null
 
         _tk_processar_json
-        _tk_configurar_systemd || exit 1
+        _tk_configurar_ambiente || exit 1
 
-        systemctl --user restart tatico-chrome.service || { echo -e "\n[ERRO] falha ao registrar o servico no systemctl."; exit 1; }
+        if [ "$servicos" == "sim" ]; then
+            systemctl --user restart tatico-chrome.service || { echo -e "\n[ERRO] falha ao registrar o servico no systemctl."; exit 1; }
+        fi
 
         echo "instalação base concluída."
         ;;
@@ -382,7 +437,9 @@ case "$acao" in
         ;;
     config)
         _tk_processar_json
-        systemctl --user restart tatico-chrome.service || exit 1
+        if [ "$servicos" == "sim" ]; then
+            systemctl --user restart tatico-chrome.service || exit 1
+        fi
         echo "configurações aplicadas."
         ;;
 esac
