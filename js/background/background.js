@@ -16,7 +16,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         tabId: sender.tab ? sender.tab.id : undefined
       });
     }
-    
+
     // marco se o timer assumiu o controle nesta sessao
     autoRefreshTimerAtivo = !!textBadge;
     if (!autoRefreshTimerAtivo) verificarReverterBadgeRevolver();
@@ -37,7 +37,7 @@ function atualizarBadgeRevolver(status) {
   if (autoRefreshTimerAtivo) return; // delego prioridade ao timer
 
   if (status) {
-    chrome.action.setBadgeText({ text: "\u27F3" }); 
+    chrome.action.setBadgeText({ text: "\u27F3" });
     chrome.action.setBadgeBackgroundColor({ color: "#28a745" });
   } else {
     chrome.action.setBadgeText({ text: "OFF" });
@@ -57,6 +57,17 @@ function pararRotacaoAbas() {
     revolverIntervalo = null;
   }
   atualizarBadgeRevolver(false);
+}
+
+// checo se a url possui o curinga para regex ou sigo com match normal
+function validarMatchUrl(urlAba, urlCadastrada) {
+  if (!urlCadastrada) return false;
+  if (urlCadastrada.includes('*')) {
+    const stringRegex = '^' + urlCadastrada.split('*').map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+    const regex = new RegExp(stringRegex);
+    return regex.test(urlAba);
+  }
+  return urlAba.includes(urlCadastrada);
 }
 
 function iniciarRotacaoAbas() {
@@ -91,12 +102,31 @@ function iniciarRotacaoAbas() {
     atualizarBadgeRevolver(true);
 
     chrome.tabs.query({ currentWindow: true }, (tabs) => {
-      const abaAlvo = tabs.find(t => t.url && t.url.includes(itemAtual.url));
+      const abaAlvo = tabs.find(t => t.url && validarMatchUrl(t.url, itemAtual.url));
+      let ocorreuAlteracaoNoEstado = false;
 
       if (abaAlvo) {
         chrome.tabs.update(abaAlvo.id, { active: true });
+
+        // atualizo o item como aberto caso a extensao o tenha encontrado ativo
+        if (!itemAtual.aberto) {
+          itemAtual.aberto = true;
+          ocorreuAlteracaoNoEstado = true;
+        }
       } else if (itemAtual.url) {
-        chrome.tabs.create({ url: itemAtual.url, active: true });
+        // se nao achou a aba mas ela ja foi aberta antes, ignoro a criacao novamente para continuar a rotina
+        if (!itemAtual.aberto) {
+          // limpo o asterisco para tentar abrir ao menos o fallback da base url
+          const urlLimpaParaAbertura = itemAtual.url.replace(/\*/g, '');
+          chrome.tabs.create({ url: urlLimpaParaAbertura, active: true });
+          itemAtual.aberto = true;
+          ocorreuAlteracaoNoEstado = true;
+        }
+      }
+
+      // salvo o status do objeto atualizado de volta no storage pra refletir em todas as interfaces
+      if (ocorreuAlteracaoNoEstado) {
+        chrome.storage.local.set({ playlists: playlists });
       }
 
       abaAtualIndex = (abaAtualIndex + 1) % itensAtivos.length;
