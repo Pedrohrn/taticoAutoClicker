@@ -1,3 +1,4 @@
+/* OLHAR ESSES INPUTS, É O QUE TÁ CAUSANDO A ESTRNHAEZA NOS INPUTS EM OUTROS SITES - VERIFICAR OUTRAS TAGS E CLASSES TAMBEM */
 :root {
   --tatico-red: #d11c1c;
   --tatico-red-hover: #a31515;
@@ -103,4 +104,31 @@ body {
 
 .hidden {
   display: none !important;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.action-buttons .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  min-width: 30px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.input-no-shrink,
+input[type="number"],
+input[type="text"],
+input[type="url"] {
+  min-width: 60px;
+  flex-shrink: 0;
 }
