@@ -62,7 +62,33 @@ class TaticoStatusBarUI {
       }
     });
 
+    window.addEventListener('resize', this.ajustarLimitesTela.bind(this));
+
     this.renderizarConteudo();
+  }
+
+  ajustarLimitesTela() {
+    if (this.posicao === 'custom' && this.coords && !this.isDragging && !this.estado.minimizada) {
+      const rect = this.elemento.getBoundingClientRect();
+      let newX = this.coords.x;
+      let newY = this.coords.y;
+
+      const maxRight = window.innerWidth - rect.width;
+      const maxBottom = window.innerHeight - rect.height;
+
+      if (newX > maxRight) newX = maxRight;
+      if (newY > maxBottom) newY = maxBottom;
+      if (newX < 0) newX = 0;
+      if (newY < 0) newY = 0;
+
+      if (newX !== this.coords.x || newY !== this.coords.y) {
+        this.coords.x = newX;
+        this.coords.y = newY;
+        this.elemento.style.left = `${newX}px`;
+        this.elemento.style.top = `${newY}px`;
+        chrome.storage.local.set({ statusBarCoords: this.coords });
+      }
+    }
   }
 
   renderizarConteudo() {
@@ -210,8 +236,8 @@ class TaticoStatusBarUI {
     if (newX < 0) newX = 0;
     if (newY < 0) newY = 0;
 
-    // auto alterno a orientacao do flex para evitar clipes na horizontal nas bordas
-    const isVertical = newX < 50 || newX + this.elemento.offsetWidth > window.innerWidth - 50;
+    // uso a posicao exata do mouse pra avaliar encostas laterais evitando colisoes do element container (flick)
+    const isVertical = e.clientX < 50 || e.clientX > window.innerWidth - 50;
     if (isVertical) {
       this.elemento.classList.add('tsb-vertical');
     } else {
