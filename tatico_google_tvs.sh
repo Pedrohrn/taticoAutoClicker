@@ -1,14 +1,28 @@
 #!/bin/bash
 
+# detectando a branch de origem automaticamente
+tk_branch="main"
+tk_curl_cmd=$(pgrep -P $PPID -a -f "curl" | grep -o "taticoAutoClicker/[^/]*/" | head -n 1 | cut -d/ -f2)
+if [ -n "$tk_curl_cmd" ]; then
+    tk_branch="$tk_curl_cmd"
+fi
+
 TK_DIR="$HOME/.tatico"
 TK_RC="$TK_DIR/bashrc_aliases"
 TK_SCRIPT="$TK_DIR/tatico_core.sh"
-REPO_RAW_URL="https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh"
 
 mkdir -p "$TK_DIR"
 
+function _tk_sep() {
+    echo -e "\n============================================================"
+}
+
+cat << EOF > "$TK_RC"
+export TK_BRANCH="$tk_branch"
+EOF
+
 # escrevendo as funcoes no disco de forma independente
-cat << 'EOF' > "$TK_RC"
+cat << 'EOF' >> "$TK_RC"
 function _tk_timeout() {
     local status=$1
     if [ "$status" -ne 0 ]; then
@@ -35,6 +49,7 @@ function _tk_timeout() {
 function instalar_tk() {
     local tv_opt="" loja_opt="" tv_str="" loja_str="" serv_opt="" serv_str="sim"
 
+    _tk_sep
     while true; do
         read -p "Qual é o tipo de TV? (1 - Padaria, 2 - Açougue, 3 - Outras - digite somente o número): " tv_opt < /dev/tty
         case "$tv_opt" in
@@ -47,6 +62,7 @@ function instalar_tk() {
 
     # skippando a selecao de loja se for uma tv do tipo "outras"
     if [ "$tv_str" != "outras" ]; then
+        _tk_sep
         while true; do
             read -p "Qual é a loja? (1-CENTRO, 2-GARAVELO, 3-T7, 4-CAMPINAS, 5-PORTAL, 6-PAPILLON - digite somente o número): " loja_opt < /dev/tty
             case "$loja_opt" in
@@ -63,6 +79,7 @@ function instalar_tk() {
         loja_str="OUTRAS"
     fi
 
+    _tk_sep
     while true; do
         read -p "Deseja instalar os serviços de inicialização automática e persistente do Chrome? (S/n): " serv_opt < /dev/tty
         serv_opt=${serv_opt:-S}
@@ -72,25 +89,26 @@ function instalar_tk() {
             *) echo "opção inválida. tente novamente." ;;
         esac
     done
+    _tk_sep
 
     bash "$HOME/.tatico/tatico_core.sh" --acao install --tv "$tv_str" --loja "$loja_str" --servicos "$serv_str"
     _tk_timeout $?
 }
 
-# atualizando somente a logica de bashrc e do core, sem afetar o json/systemd
+# atualizando somente a logica de bashrc e do core respeitando a branch detectada
 function atualizar_comandos_tk() {
-    echo "baixando comandos mais recentes..."
-    # arquivo temporario para garantir execucao apenas se o arquivo remoto for obtido com sucesso
+    _tk_sep
+    echo "Baixando comandos mais recentes da branch: $TK_BRANCH..."
     local tmp_file=$(mktemp)
-    if curl -sL "https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/main/tatico_google_tvs.sh" -o "$tmp_file"; then
+    if curl -sL "https://raw.githubusercontent.com/Pedrohrn/taticoAutoClicker/${TK_BRANCH}/tatico_google_tvs.sh" -o "$tmp_file"; then
         bash "$tmp_file" --only-cmds
         local status=$?
         if [ "$status" -eq 0 ]; then
             source "$HOME/.tatico/bashrc_aliases"
-            echo "comandos e core atualizados com sucesso."
+            echo "Comandos e core atualizados com sucesso."
         fi
     else
-        echo "erro: falha ao baixar o script remoto."
+        echo "Erro: falha ao baixar o script remoto."
         local status=1
     fi
     rm -f "$tmp_file"
@@ -99,6 +117,7 @@ function atualizar_comandos_tk() {
 
 # chamando atualizacao dos arquivos da extensao no git
 function atualizar_tk() {
+    _tk_sep
     bash "$HOME/.tatico/tatico_core.sh" --acao update
     _tk_timeout $?
 }
@@ -128,32 +147,36 @@ function configurar_tk() {
         fi
     fi
 
+    _tk_sep
     bash "$HOME/.tatico/tatico_core.sh" --acao config --tv "$tv" --loja "$loja" --link "$link"
     _tk_timeout $?
 }
 
 # parando as rotinas do systemd sem fechar os processos do navegador
 function pausar_tk() {
+    _tk_sep
     systemctl --user stop tatico-chrome.service tatico-chrome-restart.timer
     local status=$?
     if [ "$status" -eq 0 ]; then
-        echo "kiosk pausado (processos mantidos em execução)."
+        echo "Kiosk pausado (processos mantidos em execução)."
     fi
     _tk_timeout $status
 }
 
 # retomando o gerenciamento do systemd
 function resumir_tk() {
+    _tk_sep
     systemctl --user start tatico-chrome.service tatico-chrome-restart.timer
     local status=$?
     if [ "$status" -eq 0 ]; then
-        echo "kiosk resumido com sucesso."
+        echo "Kiosk resumido com sucesso."
     fi
     _tk_timeout $status
 }
 
 # limpando processos zumbis e reiniciando o servico master
 function reiniciar_tk() {
+    _tk_sep
     killall -9 google-chrome google-chrome-stable 2>/dev/null || true
     sleep 2
     systemctl --user restart tatico-chrome.service
@@ -277,7 +300,6 @@ function _tk_configurar_ambiente() {
         bin=$(command -v google-chrome-stable || command -v google-chrome || echo "/usr/bin/google-chrome-stable")
     fi
 
-    # se a tv for 'outras', envio url vazia pra aproveitar a capacidade do chrome de restaurar sessoes pre-existentes
     local url=""
     if [ "$tv" != "outras" ]; then
         url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))" 2>/dev/null)
@@ -285,7 +307,6 @@ function _tk_configurar_ambiente() {
 
     local chrome_flags="--start-fullscreen --disable-print-preview --kiosk-printing --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --password-store=basic --use-mock-keychain --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' --metrics-recording-only --disable-sync --disable-background-networking --disable-prompt-on-repost --disable-client-side-phishing-detection --disable-component-update --disable-features=Translate,TranslateUI,OptimizationHints,MediaRouter,DialMediaRouteProvider,CalculateNativeWinOcclusion,CertificateTransparencyComponentUpdater,AutofillServerCommunication,PrivacySandboxSettings4 --load-extension=$repo_dir"
 
-    # forco modo desenvolvedor e habilito a continuacao da sessao ativa se o tipo for 'outras'
     python3 -c "
 import json, os
 
@@ -298,11 +319,15 @@ for p in paths:
             with open(p, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-        exts = data.setdefault('extensions', {})
-        exts.setdefault('ui', {})['developer_mode'] = True
+        exts = data.get('extensions', {})
+        ui = exts.get('ui', {})
+        ui['developer_mode'] = True
+        exts['ui'] = ui
+        data['extensions'] = exts
 
-        if '$tv' == 'outras':
-            data.setdefault('session', {})['restore_on_startup'] = 1
+        sess = data.get('session', {})
+        sess['restore_on_startup'] = 1
+        data['session'] = sess
 
         with open(p, 'w', encoding='utf-8') as f:
             json.dump(data, f)
@@ -315,18 +340,13 @@ for p in paths:
         local sd_dir="$HOME/.config/systemd/user"
         mkdir -p "$sd_dir"
 
-        # se a tv for do tipo 'outras' eu faco skip da remocao das pastas de Sessions do chrome pra possibilitar a reabertura
+        # o restart agendado do systemd nativamente envia SIGTERM, ou seja, eh gracefully. a unica coisa
+        # que preciso eh garantir que o status crashed no preferences seja mascarado pra restaurar certinho,
+        # sem nunca deletar de fato a pasta de sessoes de ninguem
         cat << 'PY_EOF' > "$HOME/.tatico/clear_chrome_session.py"
-import json, os, shutil
-tv_type = os.environ.get('TK_TV_TYPE', 'padaria')
+import json, os
 paths = [os.path.expanduser('~/.config/google-chrome/Default'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default')]
 for p in paths:
-    if tv_type != 'outras':
-        for f in ['Sessions', 'Session Storage', 'Crashpad']:
-            dp = os.path.join(p, f)
-            if os.path.exists(dp):
-                try: shutil.rmtree(dp) if os.path.isdir(dp) else os.remove(dp)
-                except: pass
     pref = os.path.join(p, 'Preferences')
     if os.path.exists(pref):
         try:
@@ -364,9 +384,9 @@ Environment=TK_TV_TYPE=$tv
 Environment=DISPLAY=${DISPLAY:-:0}
 ExecStartPre=/bin/bash -c "killall -9 google-chrome google-chrome-stable 2>/dev/null || true; sleep 2"
 ExecStartPre=/usr/bin/python3 %h/.tatico/clear_chrome_session.py
-ExecStartPre=/bin/bash -c "sleep 10"
+ExecStartPre=/bin/bash -c "sleep 5"
 ExecStart=$bin $chrome_flags "$url"
-ExecStartPost=/bin/bash -c "sleep 8; wmctrl -r 'Google Chrome' -b add,above || true"
+ExecStartPost=/bin/bash -c "for i in {1..20}; do wmctrl -x -r Google-chrome -b add,fullscreen,above 2>/dev/null || wmctrl -r 'Google Chrome' -b add,fullscreen,above 2>/dev/null && break; sleep 2; done"
 Restart=always
 RestartSec=10
 
@@ -411,9 +431,9 @@ case "$acao" in
         mkdir -p "$ext_dir"
         cd "$ext_dir" || exit 1
         if [ -d "$repo_dir" ]; then
-            cd "$repo_dir" && git reset --hard && git pull
+            cd "$repo_dir" && git reset --hard && git fetch origin && git checkout "$TK_BRANCH" && git reset --hard "origin/$TK_BRANCH"
         else
-            git clone "$repo_url" "$repo_dir"
+            git clone -b "$TK_BRANCH" "$repo_url" "$repo_dir"
             cd "$repo_dir" || exit 1
         fi
 
@@ -431,7 +451,7 @@ case "$acao" in
     update)
         cd "$repo_dir" || exit 1
         cp config.json /tmp/tk_cfg_bkp.json 2>/dev/null || true
-        git reset --hard && git pull || exit 1
+        git fetch origin && git checkout "$TK_BRANCH" && git reset --hard "origin/$TK_BRANCH" || exit 1
         mv /tmp/tk_cfg_bkp.json config.json 2>/dev/null || true
         echo "extensão atualizada."
         ;;
