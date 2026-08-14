@@ -63,20 +63,44 @@ if [ "$1" != "--only-cmds" ]; then
     fi
 fi
 
-tk_branch="main"
+function _tk_detect_branch() {
+    local branch=""
+    local rgx='taticoAutoClicker/[a-zA-Z0-9_/-]+/tatico_google_tvs\.sh'
 
-tk_curl_cmd=$(ps -eo args 2>/dev/null | grep -E "curl.*taticoAutoClicker" | grep -v grep | grep -o 'taticoAutoClicker/[^/]*' | tail -n 1 | cut -d/ -f2)
+    if command -v wl-paste >/dev/null 2>&1; then
+        branch=$(wl-paste 2>/dev/null | grep -oE "$rgx" | head -n 1 | sed -E 's|taticoAutoClicker/(.*)/tatico_google_tvs\.sh|\1|')
+    fi
+    if [ -z "$branch" ] && command -v xclip >/dev/null 2>&1; then
+        branch=$(xclip -o -selection clipboard 2>/dev/null | grep -oE "$rgx" | head -n 1 | sed -E 's|taticoAutoClicker/(.*)/tatico_google_tvs\.sh|\1|')
+    fi
+    if [ -z "$branch" ] && command -v xsel >/dev/null 2>&1; then
+        branch=$(xsel -b 2>/dev/null | grep -oE "$rgx" | head -n 1 | sed -E 's|taticoAutoClicker/(.*)/tatico_google_tvs\.sh|\1|')
+    fi
 
-if [ -z "$tk_curl_cmd" ]; then
-    tk_curl_cmd=$(grep -E "curl.*taticoAutoClicker" "$HOME/.bash_history" 2>/dev/null | tail -n 1 | grep -o 'taticoAutoClicker/[^/]*' | cut -d/ -f2)
-fi
+    if [ -z "$branch" ]; then
+        local tty_num=$(tty 2>/dev/null | grep -oE '[0-9]+$')
+        if [ -n "$tty_num" ] && [ -c "/dev/vcs$tty_num" ] && sudo -n true 2>/dev/null; then
+            branch=$(sudo cat "/dev/vcs$tty_num" 2>/dev/null | grep -oE "$rgx" | head -n 1 | sed -E 's|taticoAutoClicker/(.*)/tatico_google_tvs\.sh|\1|')
+        fi
+    fi
 
-if [ -z "$tk_curl_cmd" ] && [ -d "$HOME/tatico_extensions/taticoAutoClicker/.git" ]; then
-    tk_curl_cmd=$(cd "$HOME/tatico_extensions/taticoAutoClicker" && git rev-parse --abbrev-ref HEAD 2>/dev/null)
-fi
+    if [ -z "$branch" ] && sudo -n true 2>/dev/null; then
+        branch=$(sudo awk '/\[heap\]/ { split($1, a, "-"); print "0x" a[1], "0x" a[2] }' /proc/$PPID/maps 2>/dev/null | while read start end; do
+            local size=$(($end - $start))
+            sudo dd if=/proc/$PPID/mem skip=$(($start / 4096)) bs=4096 count=$(($size / 4096 + 1)) 2>/dev/null
+        done | strings -n 15 | grep -oE "$rgx" | head -n 1 | sed -E 's|taticoAutoClicker/(.*)/tatico_google_tvs\.sh|\1|')
+    fi
 
-if [ -n "$tk_curl_cmd" ] && [ "$tk_curl_cmd" != "HEAD" ]; then
-    tk_branch="$tk_curl_cmd"
+    if [ -z "$branch" ]; then
+        branch=$(grep -oE "$rgx" "$HOME/.bash_history" 2>/dev/null | tail -n 1 | sed -E 's|taticoAutoClicker/(.*)/tatico_google_tvs\.sh|\1|')
+    fi
+
+    echo "$branch"
+}
+
+tk_branch=$(_tk_detect_branch)
+if [ -z "$tk_branch" ]; then
+    tk_branch="main"
 fi
 
 TK_DIR="$HOME/.tatico"
@@ -124,8 +148,12 @@ function _tk_timeout() {
     done
     printf "\r\033[Kterminal fechando agora.\n"
 
-    local p_bash=$(ps -o ppid= -p $$ 2>/dev/null | grep -o '[0-9]*')
-    kill -9 $p_bash $$ 2>/dev/null
+    local sid=$(ps -o sid= -p $$ 2>/dev/null | grep -o '[0-9]*')
+    if [ -n "$sid" ]; then
+        kill -9 -$sid 2>/dev/null
+    else
+        kill -9 $PPID $$ 2>/dev/null
+    fi
 }
 
 function instalar_tk() {
