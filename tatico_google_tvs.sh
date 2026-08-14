@@ -2,8 +2,18 @@
 
 # detectando a branch de origem automaticamente
 tk_branch="main"
-tk_curl_cmd=$(pgrep -P $PPID -a -f "curl" | grep -o "taticoAutoClicker/[^/]*/" | head -n 1 | cut -d/ -f2)
-if [ -n "$tk_curl_cmd" ]; then
+
+tk_curl_cmd=$(ps -eo args 2>/dev/null | grep -E "curl.*taticoAutoClicker" | grep -v grep | grep -o "taticoAutoClicker/[^/]*/" | tail -n 1 | cut -d/ -f2)
+
+if [ -z "$tk_curl_cmd" ]; then
+    tk_curl_cmd=$(grep -E "curl.*taticoAutoClicker" "$HOME/.bash_history" 2>/dev/null | tail -n 1 | grep -o "taticoAutoClicker/[^/]*/" | cut -d/ -f2)
+fi
+
+if [ -z "$tk_curl_cmd" ] && [ -d "$HOME/tatico_extensions/taticoAutoClicker/.git" ]; then
+    tk_curl_cmd=$(cd "$HOME/tatico_extensions/taticoAutoClicker" && git rev-parse --abbrev-ref HEAD 2>/dev/null)
+fi
+
+if [ -n "$tk_curl_cmd" ] && [ "$tk_curl_cmd" != "HEAD" ]; then
     tk_branch="$tk_curl_cmd"
 fi
 
@@ -30,14 +40,22 @@ function _tk_timeout() {
         return "$status"
     fi
 
-    local s=15
+    local s=30
     echo ""
+    read -t 0.1 -n 1000 -s < /dev/tty 2>/dev/null
+
     while [ $s -gt 0 ]; do
         echo -ne "\rterminal fechando em $s segundos... (pressione qualquer tecla para cancelar e ler o log)\033[0K"
-        if read -t 1 -n 1 -s < /dev/tty; then
-            echo -e "\nfechamento cancelado."
+        if read -t 1 -n 1 -s < /dev/tty 2>/dev/null; then
+            echo -e "\nfechamento cancelado pelo usuário."
             return 0
         fi
+
+        local rc=$?
+        if [ $rc -ne 142 ] && [ $rc -ne 0 ]; then
+            sleep 1
+        fi
+
         ((s--))
     done
     echo -ne "\rterminal fechando agora.\033[0K\n"
