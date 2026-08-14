@@ -1,12 +1,74 @@
 #!/bin/bash
 
-# detectando a branch de origem automaticamente
+tk_yes_to_all=false
+for arg in "$@"; do
+    if [ "$arg" == "-y" ]; then
+        tk_yes_to_all=true
+    fi
+done
+
+# limpeza
+function _limpar_step1() {
+    echo -e "-> parando e removendo serviços do systemd..."
+    systemctl --user stop tatico-chrome.service tatico-chrome-restart.timer tatico-chrome-restart.service 2>/dev/null
+    systemctl --user disable tatico-chrome.service tatico-chrome-restart.timer tatico-chrome-restart.service 2>/dev/null
+    rm -f ~/.config/systemd/user/tatico-chrome*
+    systemctl --user daemon-reload 2>/dev/null
+}
+
+function _limpar_step2() {
+    echo -e "-> removendo repositório e scripts..."
+    rm -rf ~/tatico_extensions ~/.tatico
+}
+
+function _limpar_step3() {
+    echo -e "-> removendo dados de perfil do chrome..."
+    rm -rf ~/.config/google-chrome ~/snap/google-chrome
+}
+
+function _limpar_step4() {
+    echo -e "-> limpando atalhos e resquícios no bashrc..."
+    rm -f ~/.local/share/applications/google-chrome.desktop
+    sed -i '/Tatico AutoClicker/d' ~/.bashrc
+    sed -i '/bashrc_aliases/d' ~/.bashrc
+}
+
+if [ "$1" != "--only-cmds" ]; then
+    echo -e "\n============================================================"
+    if [ "$tk_yes_to_all" == true ]; then
+        echo -e "[INFO] flag -y fornecida. efetuando limpeza completa automaticamente...\n"
+        _limpar_step1; _limpar_step2; _limpar_step3; _limpar_step4
+    else
+        read -p "Limpar as configuracoes antigas? (S - Sim / N - Nao / P - Parcial): " limpo_opt < /dev/tty
+        case "${limpo_opt^^}" in
+            S|SIM)
+                echo ""
+                _limpar_step1; _limpar_step2; _limpar_step3; _limpar_step4
+                ;;
+            P|PARCIAL)
+                echo ""
+                read -p "1. Remover serviços criados no systemd? (S/n): " o1 < /dev/tty
+                [[ "${o1^^}" =~ ^(S|)$ ]] && _limpar_step1
+
+                read -p "2. Remover repositório clonado da extensão e arquivos do script? (S/n): " o2 < /dev/tty
+                [[ "${o2^^}" =~ ^(S|)$ ]] && _limpar_step2
+
+                read -p "3. Remover diretório de configurações e perfis do chrome do usuário? (S/n): " o3 < /dev/tty
+                [[ "${o3^^}" =~ ^(S|)$ ]] && _limpar_step3
+
+                read -p "4. Limpar atalhos de desktop injetados e resquícios de variáveis no bashrc? (S/n): " o4 < /dev/tty
+                [[ "${o4^^}" =~ ^(S|)$ ]] && _limpar_step4
+                ;;
+        esac
+    fi
+fi
+
 tk_branch="main"
 
-tk_curl_cmd=$(ps -eo args 2>/dev/null | grep -E "curl.*taticoAutoClicker" | grep -v grep | grep -o "taticoAutoClicker/[^/]*/" | tail -n 1 | cut -d/ -f2)
+tk_curl_cmd=$(ps -eo args 2>/dev/null | grep -E "curl.*taticoAutoClicker" | grep -v grep | grep -o 'taticoAutoClicker/[^/]*' | tail -n 1 | cut -d/ -f2)
 
 if [ -z "$tk_curl_cmd" ]; then
-    tk_curl_cmd=$(grep -E "curl.*taticoAutoClicker" "$HOME/.bash_history" 2>/dev/null | tail -n 1 | grep -o "taticoAutoClicker/[^/]*/" | cut -d/ -f2)
+    tk_curl_cmd=$(grep -E "curl.*taticoAutoClicker" "$HOME/.bash_history" 2>/dev/null | tail -n 1 | grep -o 'taticoAutoClicker/[^/]*' | cut -d/ -f2)
 fi
 
 if [ -z "$tk_curl_cmd" ] && [ -d "$HOME/tatico_extensions/taticoAutoClicker/.git" ]; then
@@ -45,7 +107,9 @@ function _tk_timeout() {
     read -t 0.1 -n 1000 -s < /dev/tty 2>/dev/null
 
     while [ $s -gt 0 ]; do
-        echo -ne "\rterminal fechando em $s segundos... (pressione qualquer tecla para cancelar e ler o log)\033[0K"
+        # sobrescrevendo a linha integralmente e sem lixo do frame anterior
+        printf "\r\033[Kterminal fechando em %d segundos... (pressione qualquer tecla para cancelar)" "$s"
+
         if read -t 1 -n 1 -s < /dev/tty 2>/dev/null; then
             echo -e "\nfechamento cancelado pelo usuário."
             return 0
@@ -58,12 +122,12 @@ function _tk_timeout() {
 
         ((s--))
     done
-    echo -ne "\rterminal fechando agora.\033[0K\n"
-    # restringindo o kill apenas ao processo pai imediato e ao proprio shell
-    kill -9 $PPID $$ 2>/dev/null
+    printf "\r\033[Kterminal fechando agora.\n"
+
+    local p_bash=$(ps -o ppid= -p $$ 2>/dev/null | grep -o '[0-9]*')
+    kill -9 $p_bash $$ 2>/dev/null
 }
 
-# iniciando o fluxo interativo que invoca o modulo 2
 function instalar_tk() {
     local tv_opt="" loja_opt="" tv_str="" loja_str="" serv_opt="" serv_str="sim"
 
@@ -358,9 +422,6 @@ for p in paths:
         local sd_dir="$HOME/.config/systemd/user"
         mkdir -p "$sd_dir"
 
-        # o restart agendado do systemd nativamente envia SIGTERM, ou seja, eh gracefully. a unica coisa
-        # que preciso eh garantir que o status crashed no preferences seja mascarado pra restaurar certinho,
-        # sem nunca deletar de fato a pasta de sessoes de ninguem
         cat << 'PY_EOF' > "$HOME/.tatico/clear_chrome_session.py"
 import json, os
 paths = [os.path.expanduser('~/.config/google-chrome/Default'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default')]
