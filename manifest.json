@@ -28,9 +28,11 @@
         "*://*/*"
       ],
       "css": [
-        "css/components.css"
+        "css/components.css",
+        "css/global.css"
       ],
       "js": [
+        "js/content/statusBar.js",
         "js/content/autoClicker.js"
       ],
       "run_at": "document_end"
