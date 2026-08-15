@@ -98,6 +98,13 @@ function iniciarRotacaoAbas() {
 
     const itemAtual = itensAtivos[abaAtualIndex];
     const tempoMs = ((itemAtual.minutos || 0) * 60 + (itemAtual.segundos || 10)) * 1000;
+    const targetTime = Date.now() + tempoMs;
+
+    chrome.storage.local.set({
+      revolverTargetTime: targetTime,
+      revolverCurrentIdx: abaAtualIndex + 1,
+      revolverTotalItems: itensAtivos.length
+    });
 
     atualizarBadgeRevolver(true);
 
