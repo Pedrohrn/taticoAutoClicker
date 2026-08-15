@@ -48,20 +48,6 @@ class TaticoStatusBarUI {
   construirDOM() {
     if (document.getElementById('tatico-statusbar-inj')) return;
 
-    if (!document.getElementById('tatico-statusbar-inj-style')) {
-      const style = document.createElement('style');
-      style.id = 'tatico-statusbar-inj-style';
-      style.textContent = `
-        .tsb-drag-handle { cursor: grab; padding: 0 8px; font-size: 16px; user-select: none; display: flex; align-items: center; justify-content: center; }
-        .tsb-drag-handle:active { cursor: grabbing; }
-        .tatico-statusbar.tsb-vertical .tsb-content { flex-direction: column; }
-        .tatico-statusbar.tsb-vertical .tsb-drag-handle { padding: 8px 0; transform: rotate(90deg); }
-        .tatico-statusbar.is-custom { bottom: auto !important; right: auto !important; transform: none !important; margin: 0 !important; }
-        .tsb-btn { white-space: nowrap; font-family: monospace; }
-      `;
-      document.head.appendChild(style);
-    }
-
     this.elemento = document.createElement('div');
     this.elemento.id = 'tatico-statusbar-inj';
     document.body.appendChild(this.elemento);
@@ -150,7 +136,6 @@ class TaticoStatusBarUI {
         this.elemento.className = 'tatico-statusbar is-custom';
         if (this.estado.minimizada) this.elemento.classList.add('is-minimized');
 
-        // ajustando a espelhagem visual para nao quebrar em cantos apertados
         const isNearEdge = this.coords.x < 50 || this.coords.x + this.elemento.offsetWidth > window.innerWidth - 50;
         if (isNearEdge && !this.estado.minimizada) {
           this.elemento.classList.add('tsb-vertical');
