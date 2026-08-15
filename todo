@@ -17,3 +17,9 @@ instalacao:
 testes:
   - windows
   - outros navegadores (mozilla e eddge)
+
+
+### 15/08
+
+- arrumar controle do autorevolver na barra de status (sincronizar)
+- ajustar o layout da barra de status quando ela está na vertical
