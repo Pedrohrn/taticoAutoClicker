@@ -113,9 +113,11 @@ class TaticoStatusBarUI {
         <button id="tsb-btn-ac" class="tsb-btn" title="Alternar AutoClicker"></button>
         <button id="tsb-btn-ar" class="tsb-btn" title="Alternar AutoRefresh"></button>
         <button id="tsb-btn-rev" class="tsb-btn" title="Alternar Revolver"></button>
-        <button id="tsb-btn-conf" class="tsb-btn" title="Configurações">\u2699</button>
-        <button id="tsb-btn-min" class="tsb-btn" title="Minimizar">\u25BC</button>
-        <button id="tsb-btn-close" class="tsb-btn" title="Fechar (Reabrir via Popup)">\u2715</button>
+        <div class="tsb-controls-row">
+          <button id="tsb-btn-conf" class="tsb-btn tsb-icon-btn" title="Configurações">\u2699</button>
+          <button id="tsb-btn-min" class="tsb-btn tsb-icon-btn" title="Minimizar">\u25BC</button>
+          <button id="tsb-btn-close" class="tsb-btn tsb-icon-btn" title="Fechar (Reabrir via Popup)">\u2715</button>
+        </div>
       </div>
     `;
 

@@ -254,30 +254,75 @@
 
     <div id="tab-configuracoes" class="tab-content">
       <h2>Configurações Gerais</h2>
-      <div class="form-group">
-        <label class="checkbox-label" style="font-size: 16px; margin-bottom: 15px;">
-          <input type="checkbox" id="configStatusBarAtiva" style="width: 20px; height: 20px;">
-          Habilitar Barra de Status Injetada na Tela
-        </label>
-      </div>
-      <div class="form-group">
-        <label>Posição da Barra:</label>
-        <select id="configStatusBarPos">
-          <option value="bottom">Baixo</option>
-          <option value="top">Cima</option>
-          <option value="left">Esquerda</option>
-          <option value="right">Direita</option>
-          <option value="custom">Personalizada</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Alinhamento:</label>
-        <select id="configStatusBarAlign">
-          <option value="center">Centro</option>
-          <option value="left">Início (Esquerda/Cima)</option>
-          <option value="right">Fim (Direita/Baixo)</option>
-        </select>
-      </div>
+
+      <fieldset style="padding: 15px; margin-bottom: 20px;">
+        <legend>Barra de Status</legend>
+        <div class="form-group">
+          <label class="checkbox-label" style="font-size: 16px; margin-bottom: 15px;">
+            <input type="checkbox" id="configStatusBarAtiva" style="width: 20px; height: 20px;">
+            Habilitar Barra de Status Injetada na Tela
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Posição da Barra:</label>
+          <select id="configStatusBarPos">
+            <option value="bottom">Baixo</option>
+            <option value="top">Cima</option>
+            <option value="left">Esquerda</option>
+            <option value="right">Direita</option>
+            <option value="custom">Personalizada</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>Alinhamento:</label>
+          <select id="configStatusBarAlign">
+            <option value="center">Centro</option>
+            <option value="left">Início (Esquerda/Cima)</option>
+            <option value="right">Fim (Direita/Baixo)</option>
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset style="padding: 15px; margin-bottom: 20px;">
+        <legend>Inicialização com o Chrome</legend>
+
+        <div class="form-group checkbox-label" style="margin-bottom: 15px;">
+          <input type="checkbox" id="configAutoStart">
+          <label for="configAutoStart" style="margin: 0;">Iniciar automaticamente ao abrir o Chrome?</label>
+        </div>
+
+        <div class="form-group checkbox-label" style="margin-bottom: 15px; padding-left: 20px;">
+          <input type="checkbox" id="configAutoStartResume" disabled>
+          <label for="configAutoStartResume" style="margin: 0;">Continuar de onde parou na última sessão?</label>
+        </div>
+
+        <div class="form-group" style="padding-left: 20px; margin-bottom: 0;">
+          <label style="margin-bottom: 8px;">Módulos para iniciar:</label>
+          <div class="flex-row">
+            <label class="checkbox-label" style="margin-right: 15px;">
+              <input type="checkbox" id="configAutoStartClicker" disabled> AutoClicker
+            </label>
+            <label class="checkbox-label" style="margin-right: 15px;">
+              <input type="checkbox" id="configAutoStartRefresh" disabled> AutoRefresh
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="configAutoStartRevolver" disabled> Auto Tab Revolver
+            </label>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset style="padding: 15px; margin-bottom: 20px;">
+        <legend>Aparência</legend>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>Tema da Interface</label>
+          <div id="configThemeSwitch" class="theme-switch" style="justify-content: flex-start; padding-left: 0;">
+            <span>Light</span>
+            <div class="theme-switch-pill"></div>
+            <span>Dark</span>
+          </div>
+        </div>
+      </fieldset>
     </div>
 
   </div>

@@ -2,10 +2,10 @@ import { initProfiles } from './profile.js';
 import { initRoutines } from './routine.js';
 import { initRevolver } from './revolver.js';
 import { initStorage } from './storage.js';
+import { initSettings } from './settings.js';
 
 function garantirEstadoInicial(callbackInits) {
   chrome.storage.local.get(['perfis', 'rotinas', 'playlists', 'statusBarClosed'], (data) => {
-
     if (!data.perfis || data.perfis.length === 0) {
       fetch(chrome.runtime.getURL('config.json'))
         .then(res => res.json())
@@ -42,15 +42,12 @@ function aplicarEstadoVazio(data) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-
-  // inicializando engine de tema para sincronia com aba de config
   const applyTheme = (theme) => document.documentElement.setAttribute('data-theme', theme);
   chrome.storage.local.get(['theme'], (res) => {
     const defaultTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     applyTheme(res.theme || defaultTheme);
   });
 
-  // adicionando observador de pílula de tema injetada via config para refletir globalmente
   document.addEventListener('click', (e) => {
     const themeSwitch = e.target.closest('.theme-switch');
     if (themeSwitch) {
@@ -64,12 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (namespace === 'local' && changes.theme) applyTheme(changes.theme.newValue);
   });
 
-  // aguardo o carregamento de estado mestre antes de inicializar as views dos submodulos
   garantirEstadoInicial(() => {
     initProfiles();
     initRoutines();
     initRevolver();
     initStorage();
+    initSettings();
   });
 
   const navGroupTitles = document.querySelectorAll('.nav-group-title');
@@ -109,47 +106,4 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById(targetId).classList.add('active');
     }
   }
-
-  const selectStatusBarPos = document.getElementById('configStatusBarPos');
-  const selectStatusBarAlign = document.getElementById('configStatusBarAlign');
-
-  if (selectStatusBarPos && selectStatusBarAlign) {
-    chrome.storage.local.get(['statusBarPos'], (res) => {
-      const val = res.statusBarPos || 'bottom-center';
-      if (val === 'custom') {
-        selectStatusBarPos.value = 'custom';
-        selectStatusBarAlign.disabled = true;
-      } else {
-        const parts = val.split('-');
-        selectStatusBarPos.value = parts[0] || 'bottom';
-        selectStatusBarAlign.value = parts[1] || 'center';
-        selectStatusBarAlign.disabled = false;
-      }
-    });
-
-    // compondo a string do db ao salvar, ou travando se for customizada
-    const salvarPosicao = () => {
-      if (selectStatusBarPos.value === 'custom') {
-        selectStatusBarAlign.disabled = true;
-        chrome.storage.local.set({ statusBarPos: 'custom' });
-      } else {
-        selectStatusBarAlign.disabled = false;
-        chrome.storage.local.set({ statusBarPos: `${selectStatusBarPos.value}-${selectStatusBarAlign.value}` });
-      }
-    };
-
-    selectStatusBarPos.addEventListener('change', salvarPosicao);
-    selectStatusBarAlign.addEventListener('change', salvarPosicao);
-  }
-
-  const checkStatusBarAtiva = document.getElementById('configStatusBarAtiva');
-  if (checkStatusBarAtiva) {
-    chrome.storage.local.get(['statusBarClosed'], (res) => {
-      checkStatusBarAtiva.checked = !res.statusBarClosed;
-    });
-    checkStatusBarAtiva.addEventListener('change', (e) => {
-      chrome.storage.local.set({ statusBarClosed: !e.target.checked });
-    });
-  }
-
 });

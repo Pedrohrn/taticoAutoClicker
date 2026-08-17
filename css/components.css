@@ -469,11 +469,39 @@
 
 .tatico-statusbar.tsb-vertical .tsb-content {
   flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.tsb-controls-row {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.tsb-icon-btn {
+  flex: 1;
+  padding: 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 0;
 }
 
 .tatico-statusbar.tsb-vertical .tsb-drag-handle {
-  padding: 8px 0;
-  transform: rotate(90deg);
+  padding: 0 4px;
+  transform: none;
+  margin-bottom: 0;
+  width: auto;
+}
+
+.tatico-statusbar.tsb-vertical .tsb-btn:not(.tsb-icon-btn) {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 6px 10px;
 }
 
 .tsb-drag-handle {
@@ -595,4 +623,43 @@
 .tsb-status-icon.loading {
   color: #ffc107;
   font-weight: bold;
+}
+
+body.popup-page {
+  display: block;
+  width: 250px;
+  height: auto;
+  padding: 15px;
+  margin: 0;
+  background-color: var(--sidebar-bg);
+}
+
+.popup-header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.popup-header img {
+  max-width: 120px;
+  height: auto;
+}
+
+.status-box {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: var(--bg-secondary, var(--input-bg));
+  color: var(--text-main);
+}
+
+.status-title {
+  font-size: 12px;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.btn-block {
+  width: 100%;
+  margin-bottom: 8px;
 }

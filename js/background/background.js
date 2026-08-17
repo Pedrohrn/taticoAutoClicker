@@ -157,6 +157,41 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   }
 });
 
-chrome.storage.local.get(['revolverAtivo'], (data) => {
-  if (data.revolverAtivo) iniciarRotacaoAbas();
+// logica de inicializacao de sessao para evitar auto-start fantasma
+chrome.storage.session.get(['sessaoIniciada'], (sessionData) => {
+  if (!sessionData.sessaoIniciada) {
+    chrome.storage.session.set({ sessaoIniciada: true });
+
+    chrome.storage.local.get(['autoStartEnabled', 'autoStartResume', 'autoStartModules'], (config) => {
+      const autoStart = config.autoStartEnabled || false;
+      const resume = config.autoStartResume || false;
+      const modulos = config.autoStartModules || { clicker: false, refresh: false, revolver: false };
+
+      if (!autoStart) {
+        chrome.storage.local.set({
+          revolverAtivo: false,
+          autoClickerPaused: true,
+          autoRefreshPaused: true
+        });
+      } else {
+        if (!resume) {
+          chrome.storage.local.set({
+            revolverAtivo: modulos.revolver,
+            autoClickerPaused: !modulos.clicker,
+            autoRefreshPaused: !modulos.refresh
+          }, () => retomarLoopsAdormecidos());
+        } else {
+          retomarLoopsAdormecidos();
+        }
+      }
+    });
+  } else {
+    retomarLoopsAdormecidos();
+  }
 });
+
+function retomarLoopsAdormecidos() {
+  chrome.storage.local.get(['revolverAtivo'], (data) => {
+    if (data.revolverAtivo) iniciarRotacaoAbas();
+  });
+}

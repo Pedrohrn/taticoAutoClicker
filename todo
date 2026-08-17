@@ -21,5 +21,34 @@ testes:
 
 ### 15/08
 
-- arrumar controle do autorevolver na barra de status (sincronizar)
-- ajustar o layout da barra de status quando ela está na vertical
+- arrumar controle do autorevolver na barra de status/popup/pagina de configuracao (sincronizar)
+
+1 - criar um arquivo especifico/isolado pras configuracoes
+  - adicionar configuracao para definir o que inicia ou nao ao iniciar chrome
+    - iniciar automatico? sim/nao
+    - continuar de onde parou? - opcao ativa se a opcao iniciar automatico estiver marcada com "sim" - sim/nao: se sim, o que estiver ativo, volta ativo com o chrome, o que estiver pausado, volta pausado com o chrome, se nao, é definido pelo combobox
+    - combobox: selecione o que vai iniciar automaticamente: autoclicker | autorevolver
+
+  - adicionar configuracao do modo escuro/light no modo de
+
+2 - impedir a ativacao/desativacao ao clicar no icone na barra de extensoes (muito provavelmente é um bug)
+  - hoje quando abro uma nova guia do chrome e clico no icone na barra de extensao, a extensao magicamente começa a funcionar, mesmo sem eu clicar manualmente pra ativar as funcoes
+  - esse comportamento nao deve existir. clicar no icone da barra de extensao deve apenas exibir o popup
+
+
+- vincular perfis ao autorevolver (por conta das datas e faixa de horário)
+  - configurar no perfil se a barra de status vai ser visivel ou nao
+    - criar campo exibir barra de status na rotina do autoclicker
+    - criar campo exibir barra de status no form do autotabrevolver (geral ou em cada item?)
+    - criar campo de autorefresh no perfil
+    - perfil deve sugerir no autoclicker/autorevolver um tempo para autorefresh
+    - perfil deve sugerir no autoclicker/autorevolver se a barra de status vai ser exibida ou nao
+
+- ajustar o layout da barra de status quando ela está na vertical - deixar os componentes/itens na vertical tambem
+
+- funcao pausar_kiosk - pra parar a sobreposicao do kiosk no chrome deve pausar o reinicio automatico e a sobreposicao tambem
+  - por seguranca, deve iniciar automaticamente as 07 se estiver desligada (evitar que esquecam desligada)
+  - alterar o comportamento da TV outras -> configurar via comando o inicio "de onde parou" na opcao de inicilizacao do chrome
+
+- CRIAR FUNCAO PRA RESETAR POSICAO DA BARRA DE STATUS!!!!!!!!!!!!!!!!!!
+- BARRA DE STATUS QUEBROU NA ULTIMA ALTERACAO DO STATUSBAR.JS E COMPONENTS.CSS
