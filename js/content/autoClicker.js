@@ -1,4 +1,3 @@
-// processei padroes de strings regex pra validar wildcards dinamicamente ou forcar uma validacao estrita
 function matchComCoringa(urlAba, padrao) {
   if (!padrao) return false;
   if (padrao.includes('*')) {
@@ -6,7 +5,6 @@ function matchComCoringa(urlAba, padrao) {
     return new RegExp(regexStr).test(urlAba);
   }
 
-  // crio uma normalizacao basica pra ignorar protocolo e www em validacoes estritas
   const normalize = (u) => {
     try {
       const obj = new URL(u.includes('http') ? u : 'https://' + u);
@@ -50,7 +48,6 @@ async function resolverPausaAc() {
   }
 }
 
-// isolei e centralizei o autorefresh pra atender de maneira global e unificada a fila de prioridades
 function iniciarAutoRefreshGlobally(min, seg) {
   const timeMs = (min * 60 + seg) * 1000;
   if (timeMs <= 0) return;
@@ -227,7 +224,6 @@ window.addEventListener('load', () => {
       const pl = playlists.find(x => x.id === data.playlistIdAtiva);
       if (pl) {
         revolverItem = pl.itens.find(i => matchComCoringa(urlAtual, i.url));
-        // se achei o item do revolver mas o perfil nao estava ativo por url restrita, recrio o vinculo pelo revolver
         if (revolverItem && !perfilAtivo) {
           perfilAtivo = perfis.find(p => p.id === pl.perfil_id);
         }
