@@ -1,5 +1,6 @@
 export function initRevolver() {
   let playlistsSalvas = [];
+  let perfisLocais = [];
   let playlistEmEdicaoId = null;
 
   const body = document.getElementById('listaPlaylistsBody');
@@ -7,18 +8,16 @@ export function initRevolver() {
   const viewDetalhes = document.getElementById('detalhesPlaylistContainer');
 
   function carregarPlaylists() {
-    chrome.storage.local.get(['playlists', 'revolverAtivo', 'playlistIdAtiva'], (res) => {
+    chrome.storage.local.get(['playlists', 'revolverAtivo', 'playlistIdAtiva', 'perfis'], (res) => {
       playlistsSalvas = res.playlists || [];
-      const isGlobalActive = res.revolverAtivo;
-      const activeId = res.playlistIdAtiva;
-      renderizarLista(isGlobalActive, activeId);
+      perfisLocais = res.perfis || [];
+      renderizarLista(res.revolverAtivo, res.playlistIdAtiva);
     });
   }
 
   function renderizarLista(isGlobalActive, activeId) {
     body.innerHTML = '';
 
-    // injetando botao global de play/pause dinamicamente se ainda nao existir na view
     let btnGlobal = document.getElementById('btnToggleRevolverGlobal');
     if (!btnGlobal) {
       const btnNova = document.getElementById('btnNovaPlaylist');
@@ -27,9 +26,21 @@ export function initRevolver() {
         btnGlobal.id = 'btnToggleRevolverGlobal';
         btnNova.insertAdjacentElement('afterend', btnGlobal);
 
+        // ajustei o comportamento do play/pause global pra pegar a primeira playlist se nenhuma estiver ativa
         btnGlobal.addEventListener('click', () => {
-          chrome.storage.local.get(['revolverAtivo'], res => {
-            chrome.storage.local.set({ revolverAtivo: !res.revolverAtivo });
+          chrome.storage.local.get(['revolverAtivo', 'playlistIdAtiva', 'playlists'], res => {
+            let nextPlaylistId = res.playlistIdAtiva;
+            if (!res.revolverAtivo && !nextPlaylistId && res.playlists && res.playlists.length > 0) {
+              nextPlaylistId = res.playlists[0].id;
+            }
+
+            if (res.revolverAtivo) {
+              chrome.storage.local.set({ revolverAtivo: false });
+            } else if (nextPlaylistId) {
+              chrome.storage.local.set({ revolverAtivo: true, playlistIdAtiva: nextPlaylistId });
+            } else {
+              alert("Crie uma playlist primeiro para rodar o Revólver.");
+            }
           });
         });
       }
@@ -42,26 +53,28 @@ export function initRevolver() {
     }
 
     if (playlistsSalvas.length === 0) {
-      body.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Nenhuma playlist cadastrada.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Nenhuma playlist cadastrada.</td></tr>`;
       return;
     }
 
     playlistsSalvas.forEach(pl => {
       const isRunning = isGlobalActive && (activeId === pl.id);
+      const perfilNome = perfisLocais.find(p => p.id === pl.perfil_id)?.nome || 'Sem Perfil';
       const tr = document.createElement('tr');
-      // adotei icones puros para otimizar layout sem espremer as colunas e inseri classe de wrap
+
       tr.innerHTML = `
-        <td>${pl.nome || 'Sem Nome'}</td>
-        <td style="color: ${isRunning ? 'var(--success)' : 'var(--text-muted)'}; font-weight: bold;">
-          ${isRunning ? 'Executando' : 'Parada'}
-        </td>
-        <td style="text-align: center;">
-          <div class="action-buttons">
-            <button class="btn btn-sm btn-secondary btn-toggle-pl" data-id="${pl.id}" title="${isRunning ? 'Pausar' : 'Rodar'}">${isRunning ? '⏸' : '▶'}</button>
-            <button class="btn btn-sm btn-info btn-editar-pl" data-id="${pl.id}" title="Editar">✎</button>
-            <button class="btn btn-sm btn-danger btn-excluir-pl" data-id="${pl.id}" title="Excluir">🗑</button>
-          </div>
-        </td>
+      <td>${pl.nome || 'Sem Nome'}</td>
+      <td>${perfilNome}</td>
+      <td style="color: ${isRunning ? 'var(--success)' : 'var(--text-muted)'}; font-weight: bold;">
+      ${isRunning ? 'Executando' : 'Parada'}
+      </td>
+      <td style="text-align: center;">
+      <div class="action-buttons">
+      <button class="btn btn-sm btn-secondary btn-toggle-pl" data-id="${pl.id}" title="${isRunning ? 'Pausar' : 'Rodar'}">${isRunning ? '⏸' : '▶'}</button>
+      <button class="btn btn-sm btn-info btn-editar-pl" data-id="${pl.id}" title="Editar">✎</button>
+      <button class="btn btn-sm btn-danger btn-excluir-pl" data-id="${pl.id}" title="Excluir">🗑</button>
+      </div>
+      </td>
       `;
       body.appendChild(tr);
     });
@@ -69,11 +82,7 @@ export function initRevolver() {
     document.querySelectorAll('.btn-toggle-pl').forEach(b => b.addEventListener('click', e => {
       const id = e.target.dataset.id;
       chrome.storage.local.get(['revolverAtivo', 'playlistIdAtiva'], res => {
-        if (res.revolverAtivo && res.playlistIdAtiva === id) {
-          chrome.storage.local.set({ revolverAtivo: false });
-        } else {
-          chrome.storage.local.set({ revolverAtivo: true, playlistIdAtiva: id });
-        }
+        chrome.storage.local.set(res.revolverAtivo && res.playlistIdAtiva === id ? { revolverAtivo: false } : { revolverAtivo: true, playlistIdAtiva: id });
       });
     }));
 
@@ -88,7 +97,7 @@ export function initRevolver() {
 
   document.getElementById('btnNovaPlaylist').addEventListener('click', () => {
     const id = Date.now().toString();
-    playlistsSalvas.push({ id, nome: 'Nova Playlist', itens: [] });
+    playlistsSalvas.push({ id, nome: 'Nova Playlist', perfil_id: '', itens: [] });
     chrome.storage.local.set({ playlists: playlistsSalvas }, () => abrirEdicao(id));
   });
 
@@ -96,6 +105,7 @@ export function initRevolver() {
     playlistEmEdicaoId = id;
     const p = playlistsSalvas.find(x => x.id === id);
     document.getElementById('inputNomePlaylist').value = p.nome;
+    document.getElementById('playlistPerfilId').value = p.perfil_id || '';
 
     const chkSelectAll = document.getElementById('chkSelectAll');
     if (chkSelectAll) chkSelectAll.checked = false;
@@ -121,27 +131,33 @@ export function initRevolver() {
     if (!pl) return;
 
     if (!pl.itens || pl.itens.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">Nenhuma URL cadastrada.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Nenhuma URL cadastrada.</td></tr>`;
       return;
     }
 
     pl.itens.forEach((it, idx) => {
       const isAberto = it.aberto ? '<span style="color:var(--success); font-size:0.8em; margin-left:5px;">(Aberto)</span>' : '';
       const tr = document.createElement('tr');
-      // garantindo que os inputs temporais nunca serao esmagados via flex-shrink na classe .flex-row-inputs
+
       tr.innerHTML = `
-        <td style="text-align:center;"><input type="checkbox" class="chk-item-revolver" data-idx="${idx}"></td>
-        <td>${idx + 1}</td>
-        <td><input type="text" class="item-url input-no-shrink" value="${it.url}" placeholder="https://... ou wildcard *">${isAberto}</td>
-        <td>
-          <div class="flex-row" style="flex-wrap: nowrap;">
-            <input type="number" class="item-min input-no-shrink" value="${it.minutos}" style="width:60px;">
-            <input type="number" class="item-seg input-no-shrink" value="${it.segundos}" style="width:60px;">
-          </div>
-        </td>
-        <td style="text-align:center;"><input type="checkbox" class="item-ativo" ${it.ativo ? 'checked' : ''}></td>
-        <td style="text-align:center;"><input type="radio" name="item-principal" ${it.principal ? 'checked' : ''}></td>
-        <td style="text-align:center;"><button class="btn-danger-sm btn-remover-item" data-idx="${idx}" title="Excluir">X</button></td>
+      <td style="text-align:center;"><input type="checkbox" class="chk-item-revolver" data-idx="${idx}"></td>
+      <td>${idx + 1}</td>
+      <td><input type="text" class="item-url input-no-shrink" value="${it.url}" placeholder="https://... ou wildcard *">${isAberto}</td>
+      <td>
+      <div class="flex-row" style="flex-wrap: nowrap;" title="Tempo de Rotação da Guia">
+      <input type="number" class="item-min input-no-shrink" value="${it.minutos}" style="width:45px;">:
+      <input type="number" class="item-seg input-no-shrink" value="${it.segundos}" style="width:45px;">
+      </div>
+      </td>
+      <td>
+      <div class="flex-row" style="flex-wrap: nowrap;" title="Tempo de AutoRefresh">
+      <input type="number" class="item-ref-min input-no-shrink" value="${it.refresh_min || 0}" style="width:45px;">:
+      <input type="number" class="item-ref-seg input-no-shrink" value="${it.refresh_seg || 0}" style="width:45px;">
+      </div>
+      </td>
+      <td style="text-align:center;"><input type="checkbox" class="item-ativo" ${it.ativo ? 'checked' : ''}></td>
+      <td style="text-align:center;"><input type="radio" name="item-principal" ${it.principal ? 'checked' : ''}></td>
+      <td style="text-align:center;"><button class="btn-danger-sm btn-remover-item" data-idx="${idx}" title="Excluir">X</button></td>
       `;
       tbody.appendChild(tr);
     });
@@ -156,12 +172,17 @@ export function initRevolver() {
   function sincronizarDom() {
     const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
     if (!pl) return;
+
     pl.nome = document.getElementById('inputNomePlaylist').value;
+    pl.perfil_id = document.getElementById('playlistPerfilId').value;
+
     const linhas = document.querySelectorAll('#playlistItensBody tr:not(:has(td[colspan]))');
     pl.itens = Array.from(linhas).map((tr, idx) => ({
       url: tr.querySelector('.item-url').value,
       minutos: parseInt(tr.querySelector('.item-min').value, 10) || 0,
       segundos: parseInt(tr.querySelector('.item-seg').value, 10) || 0,
+      refresh_min: parseInt(tr.querySelector('.item-ref-min').value, 10) || 0,
+      refresh_seg: parseInt(tr.querySelector('.item-ref-seg').value, 10) || 0,
       ativo: tr.querySelector('.item-ativo').checked,
       principal: tr.querySelector('input[name="item-principal"]').checked,
       aberto: pl.itens[idx]?.aberto || false
@@ -174,14 +195,7 @@ export function initRevolver() {
       const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
       tabs.forEach(tab => {
         if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('edge://')) {
-          pl.itens.push({
-            url: tab.url,
-            minutos: 0,
-            segundos: 15,
-            ativo: true,
-            principal: false,
-            aberto: false
-          });
+          pl.itens.push({ url: tab.url, minutos: 0, segundos: 15, refresh_min: 0, refresh_seg: 0, ativo: true, principal: false, aberto: false });
         }
       });
       renderizarItens();
@@ -210,10 +224,7 @@ export function initRevolver() {
     btnRemoverSelecionados.addEventListener('click', () => {
       sincronizarDom();
       const checkboxes = document.querySelectorAll('.chk-item-revolver');
-      const indicesParaRemover = [];
-      checkboxes.forEach((chk, idx) => {
-        if (chk.checked) indicesParaRemover.push(idx);
-      });
+      const indicesParaRemover = Array.from(checkboxes).filter(chk => chk.checked).map((_, idx) => idx);
       const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
       pl.itens = pl.itens.filter((_, idx) => !indicesParaRemover.includes(idx));
       if (chkSelectAll) chkSelectAll.checked = false;
@@ -224,12 +235,18 @@ export function initRevolver() {
   document.getElementById('btnAdicionarItemRevolver').addEventListener('click', () => {
     sincronizarDom();
     const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
-    pl.itens.push({ url: '', minutos: 0, segundos: 10, ativo: true, principal: pl.itens.length === 0, aberto: false });
+    pl.itens.push({ url: '', minutos: 0, segundos: 10, refresh_min: 0, refresh_seg: 0, ativo: true, principal: pl.itens.length === 0, aberto: false });
     renderizarItens();
   });
 
   document.getElementById('btnSalvarRevolver').addEventListener('click', () => {
     sincronizarDom();
+    const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
+    if (!pl.perfil_id) {
+      alert("Atenção: É obrigatório selecionar um Perfil de Contexto para vincular ao Autorevolver.");
+      return;
+    }
+
     chrome.storage.local.set({ playlists: playlistsSalvas }, () => {
       document.getElementById('btnVoltarPlaylists').click();
     });
@@ -237,10 +254,9 @@ export function initRevolver() {
 
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && (changes.revolverAtivo || changes.playlistIdAtiva || changes.playlists)) {
-      if (document.getElementById('listaPlaylistsContainer').classList.contains('hidden') === false) {
+      if (!document.getElementById('listaPlaylistsContainer').classList.contains('hidden')) {
         carregarPlaylists();
       } else if (changes.playlists && playlistEmEdicaoId) {
-        // caso o background altere os itens pra aberto em real time
         playlistsSalvas = changes.playlists.newValue || [];
         sincronizarDom();
         renderizarItens();

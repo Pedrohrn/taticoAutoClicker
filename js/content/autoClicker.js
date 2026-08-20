@@ -1,4 +1,22 @@
-// mantenho apenas a logica de interacao com o dom e execucao de rotinas
+// processei padroes de strings regex pra validar wildcards dinamicamente ou forcar uma validacao estrita
+function matchComCoringa(urlAba, padrao) {
+  if (!padrao) return false;
+  if (padrao.includes('*')) {
+    const regexStr = '^' + padrao.split('*').map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+    return new RegExp(regexStr).test(urlAba);
+  }
+
+  // crio uma normalizacao basica pra ignorar protocolo e www em validacoes estritas
+  const normalize = (u) => {
+    try {
+      const obj = new URL(u.includes('http') ? u : 'https://' + u);
+      return obj.hostname.replace(/^www\./, '') + obj.pathname.replace(/\/$/, '') + obj.search;
+    } catch (e) {
+      return u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+    }
+  };
+  return normalize(urlAba) === normalize(padrao);
+}
 
 function encontrarElemento(tipo, seletor) {
   if (!seletor) return null;
@@ -32,39 +50,38 @@ async function resolverPausaAc() {
   }
 }
 
+// isolei e centralizei o autorefresh pra atender de maneira global e unificada a fila de prioridades
+function iniciarAutoRefreshGlobally(min, seg) {
+  const timeMs = (min * 60 + seg) * 1000;
+  if (timeMs <= 0) return;
+
+  console.log(`A página será automaticamente recarregada em ${min}:${seg.toString().padStart(2, '0')}`);
+  let counterMs = timeMs;
+
+  setInterval(() => {
+    if (counterMs > 0 && window.taticoUI && !window.taticoUI.estado.autoRefreshPaused) {
+      counterMs -= 5000;
+
+      if (counterMs <= 0) {
+        location.reload();
+        return;
+      }
+
+      const mm = Math.floor(counterMs / 60000);
+      const ss = Math.floor((counterMs % 60000) / 1000);
+      const txt = `${mm}:${ss.toString().padStart(2, '0')}`;
+
+      if (window.taticoUI) window.taticoUI.atualizarTimerUI(txt);
+      chrome.runtime.sendMessage({ action: "updateBadge", text: txt });
+    }
+  }, 5000);
+}
+
 async function executarRotinaAvancada(rotina) {
   console.log(`Iniciando Fila Avancada: ${rotina.nome}`);
 
   let abortar = false;
   let qtdeExecutado = 0;
-  let refreshTimer = null;
-
-  if (rotina.autorefresh && (rotina.autorefresh_min > 0 || rotina.autorefresh_seg > 0)) {
-    const timeMs = ((rotina.autorefresh_min || 0) * 60 + (rotina.autorefresh_seg || 0)) * 1000;
-    console.log(`A página será automáticamente recarregada em ${rotina.autorefresh_min}:${rotina.autorefresh_seg}`);
-
-    let counterMs = timeMs;
-
-    // isolo a rotina em intervalo para que ele consiga ser evitado pelo estado unificado autoRefreshPaused
-    refreshTimer = setInterval(() => {
-      if (counterMs > 0 && !window.taticoUI.estado.autoRefreshPaused) {
-        counterMs -= 5000;
-
-        if (counterMs <= 0) {
-          clearInterval(refreshTimer);
-          location.reload();
-          return;
-        }
-
-        const mm = Math.floor(counterMs / 60000);
-        const ss = Math.floor((counterMs % 60000) / 1000);
-        const txt = `${mm}:${ss.toString().padStart(2, '0')}`;
-
-        if (window.taticoUI) window.taticoUI.atualizarTimerUI(txt);
-        chrome.runtime.sendMessage({ action: "updateBadge", text: txt });
-      }
-    }, 5000);
-  }
 
   while (!abortar && (rotina.loop || qtdeExecutado < (rotina.qtde_execucoes || 1))) {
     if (rotina.usa_parada && verificarParada(rotina.condicao_parada)) {
@@ -89,7 +106,6 @@ async function executarRotinaAvancada(rotina) {
       if (passo.acao === 'click') {
         const limiteClicks = passo.click_qtde || 1;
         let cliquesFeitos = 0;
-
         const sobreporLimitePorParada = (limiteClicks === 1 && passo.parada_seletor !== '');
 
         while (true) {
@@ -117,10 +133,7 @@ async function executarRotinaAvancada(rotina) {
           cliquesFeitos++;
           alvoEncontrado = true;
 
-          if (!sobreporLimitePorParada && limiteClicks > 0 && cliquesFeitos >= limiteClicks) {
-            break;
-          }
-
+          if (!sobreporLimitePorParada && limiteClicks > 0 && cliquesFeitos >= limiteClicks) break;
           await new Promise(res => setTimeout(res, passo.click_intervalo_ms || 1000));
         }
       }
@@ -158,7 +171,6 @@ async function executarRotinaAvancada(rotina) {
 
 async function iniciarFilaRotinasSimples(rotina) {
   const cfg = rotina.config_simples;
-
   if (window.taticoUI) window.taticoUI.atualizarProgresso(1, 1, 'loading');
 
   const intervalo = setInterval(async () => {
@@ -183,26 +195,44 @@ async function iniciarFilaRotinasSimples(rotina) {
 }
 
 window.addEventListener('load', () => {
-  chrome.storage.local.get(['perfis', 'rotinas'], (data) => {
+  chrome.storage.local.get(['perfis', 'rotinas', 'playlists', 'revolverAtivo', 'playlistIdAtiva'], (data) => {
     const perfis = data.perfis || [];
     const rotinas = data.rotinas || [];
+    const playlists = data.playlists || [];
 
     const urlAtual = location.href;
     const hojeDate = new Date();
     const diaAtual = hojeDate.getDay();
-    const hh = hojeDate.getHours().toString().padStart(2, '0');
-    const mm = hojeDate.getMinutes().toString().padStart(2, '0');
-    const horaAtualStr = `${hh}:${mm}`;
+    const horaAtualStr = hojeDate.getHours().toString().padStart(2, '0') + ':' + hojeDate.getMinutes().toString().padStart(2, '0');
 
-    const perfilAtivo = perfis.find(p => {
-      const matchDia = p.dias_semana.includes(diaAtual);
-      const matchUrl = p.urls_alvo.some(url => urlAtual.includes(url));
+    let perfilAtivo = perfis.find(p => {
+      const matchDia = !p.dias_semana || p.dias_semana.length === 0 || p.dias_semana.includes(diaAtual);
+
       let matchHora = true;
       if (p.horario && p.horario.inicio && p.horario.fim) {
         matchHora = (horaAtualStr >= p.horario.inicio && horaAtualStr <= p.horario.fim);
       }
-      return matchDia && matchUrl && matchHora;
+
+      const urlsAlvo = p.urls_alvo || [];
+      const matchUrl = urlsAlvo.length === 0 || urlsAlvo.some(url => matchComCoringa(urlAtual, url));
+
+      const urlsExclusao = p.urls_exclusao || [];
+      const isExcluido = urlsExclusao.length > 0 && urlsExclusao.some(url => matchComCoringa(urlAtual, url));
+
+      return matchDia && matchHora && matchUrl && !isExcluido;
     });
+
+    let revolverItem = null;
+    if (data.revolverAtivo && data.playlistIdAtiva) {
+      const pl = playlists.find(x => x.id === data.playlistIdAtiva);
+      if (pl) {
+        revolverItem = pl.itens.find(i => matchComCoringa(urlAtual, i.url));
+        // se achei o item do revolver mas o perfil nao estava ativo por url restrita, recrio o vinculo pelo revolver
+        if (revolverItem && !perfilAtivo) {
+          perfilAtivo = perfis.find(p => p.id === pl.perfil_id);
+        }
+      }
+    }
 
     if (!perfilAtivo) {
       console.log('Tatico AutoClicker: Contexto atual nao atende a nenhum perfil.');
@@ -211,9 +241,29 @@ window.addEventListener('load', () => {
 
     const rotinasDoPerfil = rotinas.filter(r => r.perfil_id === perfilAtivo.id && r.ativa);
 
-    if (rotinasDoPerfil.length > 0) {
-      if (window.taticoUI) window.taticoUI.inicializar(rotinasDoPerfil[0].nome);
+    const exibirSb = perfilAtivo.exibir_statusbar !== false;
+    const rotinaNome = rotinasDoPerfil.length > 0 ? rotinasDoPerfil[0].nome : (revolverItem ? 'Revolver' : 'Perfil Ativo');
 
+    if (window.taticoUI) window.taticoUI.inicializar(rotinaNome, exibirSb);
+
+    let refMin = 0;
+    let refSeg = 0;
+
+    // respeitando a arvore hierarquica de heranca de refresh exigida nos requisitos (Item -> Rotina -> Perfil)
+    if (revolverItem && (revolverItem.refresh_min > 0 || revolverItem.refresh_seg > 0)) {
+      refMin = revolverItem.refresh_min;
+      refSeg = revolverItem.refresh_seg;
+    } else if (rotinasDoPerfil.length > 0 && rotinasDoPerfil[0].autorefresh) {
+      refMin = rotinasDoPerfil[0].autorefresh_min || 0;
+      refSeg = rotinasDoPerfil[0].autorefresh_seg || 0;
+    } else if (perfilAtivo.autorefresh_min > 0 || perfilAtivo.autorefresh_seg > 0) {
+      refMin = perfilAtivo.autorefresh_min || 0;
+      refSeg = perfilAtivo.autorefresh_seg || 0;
+    }
+
+    if (refMin > 0 || refSeg > 0) iniciarAutoRefreshGlobally(refMin, refSeg);
+
+    if (rotinasDoPerfil.length > 0) {
       rotinasDoPerfil.forEach(rotina => {
         if (rotina.tipo === 'simples') iniciarFilaRotinasSimples(rotina);
         else executarRotinaAvancada(rotina);
