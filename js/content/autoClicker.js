@@ -237,29 +237,53 @@ window.addEventListener('load', () => {
 
     const rotinasDoPerfil = rotinas.filter(r => r.perfil_id === perfilAtivo.id && r.ativa);
 
-    const exibirSb = perfilAtivo.exibir_statusbar !== false;
-    const rotinaNome = rotinasDoPerfil.length > 0 ? rotinasDoPerfil[0].nome : (revolverItem ? 'Revolver' : 'Perfil Ativo');
+    // agrupando todas as configuracoes de refresh ativas no contexto da guia atual
+    let temposRefresh = [];
 
-    if (window.taticoUI) window.taticoUI.inicializar(rotinaNome, exibirSb);
+    // captando configuracao do revolver, se ativo e presente
+    if (revolverItem && (revolverItem.refresh_min > 0 || revolverItem.refresh_seg > 0)) {
+      temposRefresh.push((revolverItem.refresh_min || 0) * 60 + (revolverItem.refresh_seg || 0));
+    }
+
+    // captando configuracao da rotina, se houver
+    if (rotinasDoPerfil.length > 0 && rotinasDoPerfil[0].autorefresh) {
+      temposRefresh.push((rotinasDoPerfil[0].autorefresh_min || 0) * 60 + (rotinasDoPerfil[0].autorefresh_seg || 0));
+    }
+
+    // captando configuracao do perfil global
+    if (perfilAtivo.autorefresh_min > 0 || perfilAtivo.autorefresh_seg > 0) {
+      temposRefresh.push((perfilAtivo.autorefresh_min || 0) * 60 + (perfilAtivo.autorefresh_seg || 0));
+    }
 
     let refMin = 0;
     let refSeg = 0;
 
-    // respeitando a arvore hierarquica de heranca de refresh exigida nos requisitos (Item -> Rotina -> Perfil)
-    if (revolverItem && (revolverItem.refresh_min > 0 || revolverItem.refresh_seg > 0)) {
-      refMin = revolverItem.refresh_min;
-      refSeg = revolverItem.refresh_seg;
-    } else if (rotinasDoPerfil.length > 0 && rotinasDoPerfil[0].autorefresh) {
-      refMin = rotinasDoPerfil[0].autorefresh_min || 0;
-      refSeg = rotinasDoPerfil[0].autorefresh_seg || 0;
-    } else if (perfilAtivo.autorefresh_min > 0 || perfilAtivo.autorefresh_seg > 0) {
-      refMin = perfilAtivo.autorefresh_min || 0;
-      refSeg = perfilAtivo.autorefresh_seg || 0;
+    // filtrando e ordenando para pegar sempre o evento que vai acontecer mais proximo/primeiro
+    const temposValidos = temposRefresh.filter(t => t > 0).sort((a, b) => a - b);
+    if (temposValidos.length > 0) {
+      const menorTempo = temposValidos[0];
+      refMin = Math.floor(menorTempo / 60);
+      refSeg = menorTempo % 60;
     }
 
-    if (refMin > 0 || refSeg > 0) iniciarAutoRefreshGlobally(refMin, refSeg);
+    const hasRefresh = refMin > 0 || refSeg > 0;
+    const hasClicker = rotinasDoPerfil.length > 0;
+    const hasRevolver = revolverItem != null;
 
-    if (rotinasDoPerfil.length > 0) {
+    // garantindo que a ui só apareça em guias onde de fato exista algo rodando
+    if (!hasRefresh && !hasClicker && !hasRevolver) {
+      console.log('Tatico AutoClicker: Nenhuma função ativa para esta guia. Barra de status ocultada.');
+      return;
+    }
+
+    const exibirSb = perfilAtivo.exibir_statusbar !== false;
+    const rotinaNome = hasClicker ? rotinasDoPerfil[0].nome : (hasRevolver ? 'Revolver' : 'Perfil Ativo');
+
+    if (window.taticoUI) window.taticoUI.inicializar(rotinaNome, exibirSb);
+
+    if (hasRefresh) iniciarAutoRefreshGlobally(refMin, refSeg);
+
+    if (hasClicker) {
       rotinasDoPerfil.forEach(rotina => {
         if (rotina.tipo === 'simples') iniciarFilaRotinasSimples(rotina);
         else executarRotinaAvancada(rotina);
