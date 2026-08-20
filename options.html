@@ -175,10 +175,27 @@
 
       <div id="formPerfilContainer" class="hidden">
         <h2>Editando Perfil <button id="btnVoltarPerfis" class="btn btn-sm btn-secondary">Voltar</button></h2>
+
         <div class="form-group">
           <label>Nome do Perfil:</label>
           <input type="text" id="perfilNome">
         </div>
+
+        <fieldset style="padding: 15px; margin-bottom: 15px;">
+          <legend>Configurações Globais do Perfil</legend>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="perfilStatusBar" checked>
+              Exibir Barra de Status UI para contextos vinculados a este perfil
+            </label>
+          </div>
+          <div class="form-group flex-row" style="margin-bottom: 0;">
+            <label style="margin:0;">AutoRefresh Padrão (Opcional):</label>
+            <input type="number" id="perfilAutoRefMin" value="0" min="0" placeholder="Min" style="width:60px;"> min
+            <input type="number" id="perfilAutoRefSeg" value="0" min="0" placeholder="Seg" style="width:60px;"> seg
+          </div>
+        </fieldset>
+
         <div class="form-group">
           <label>Dias da Semana Ativos:</label>
           <div class="flex-row" id="perfilDiasContainer">
@@ -191,14 +208,22 @@
             <label class="checkbox-label"><input type="checkbox" value="6"> Sáb</label>
           </div>
         </div>
+
         <div class="form-group flex-row">
           <div><label>Hora Início:</label><input type="time" id="perfilHoraInicio"></div>
           <div><label>Hora Fim:</label><input type="time" id="perfilHoraFim"></div>
         </div>
+
         <div class="form-group">
-          <label>URLs Alvo (Uma por linha):</label>
-          <textarea id="perfilUrls" rows="5" placeholder="https://app.powerbi.com/view..."></textarea>
+          <label>URLs Alvo (Uma por linha - Obsoleto caso atrelado a Playlist de Revólver):</label>
+          <textarea id="perfilUrls" rows="3" placeholder="https://app.powerbi.com/view... ou wildcard *"></textarea>
         </div>
+
+        <div class="form-group">
+          <label>URLs de Exclusão (Ignorar ação se bater com estas regras):</label>
+          <textarea id="perfilUrlsExclusao" rows="3" placeholder="https://app.powerbi.com/login*"></textarea>
+        </div>
+
         <button id="btnSalvarPerfil" class="btn btn-primary">Salvar Perfil</button>
       </div>
     </div>
@@ -211,6 +236,7 @@
           <thead>
             <tr>
               <th>Nome da Playlist</th>
+              <th>Perfil Vinculado</th>
               <th style="width: 120px;">Status</th>
               <th style="width: 200px; text-align: center;">Ações</th>
             </tr>
@@ -220,7 +246,16 @@
       </div>
       <div id="detalhesPlaylistContainer" class="hidden">
         <h2>Editando Playlist <button id="btnVoltarPlaylists" class="btn btn-sm btn-secondary">Voltar</button></h2>
-        <div class="form-group"><label>Nome da Playlist:</label><input type="text" id="inputNomePlaylist"></div>
+
+        <div class="form-group">
+          <label>Nome da Playlist:</label>
+          <input type="text" id="inputNomePlaylist">
+        </div>
+
+        <div class="form-group">
+          <label>Perfil de Contexto (Obrigatório):</label>
+          <select id="playlistPerfilId"></select>
+        </div>
 
         <h3>Itens da Playlist</h3>
         <button id="btnCapturarJanela" class="btn btn-sm btn-secondary">Salvar guias atuais</button>
@@ -237,6 +272,7 @@
               <th style="width: 30px;">#</th>
               <th>URL</th>
               <th style="width: 120px;">Tempo (M:S)</th>
+              <th style="width: 120px;">AutoRef (M:S)</th>
               <th style="width: 60px; text-align:center;">Ativa</th>
               <th style="width: 80px; text-align:center;">Principal</th>
               <th style="width: 60px; text-align:center;">Ação</th>
@@ -299,13 +335,13 @@
         <div class="form-group" style="padding-left: 20px; margin-bottom: 0;">
           <label style="margin-bottom: 8px;">Módulos para iniciar:</label>
           <div class="flex-row">
-            <label class="checkbox-label" style="margin-right: 15px;">
+            <label for="configAutoStartClicker" class="checkbox-label" style="margin-right: 15px;">
               <input type="checkbox" id="configAutoStartClicker" disabled> AutoClicker
             </label>
-            <label class="checkbox-label" style="margin-right: 15px;">
+            <label for="configAutoStartRefresh" class="checkbox-label" style="margin-right: 15px;">
               <input type="checkbox" id="configAutoStartRefresh" disabled> AutoRefresh
             </label>
-            <label class="checkbox-label">
+            <label for="configAutoStartRevolver" class="checkbox-label">
               <input type="checkbox" id="configAutoStartRevolver" disabled> Auto Tab Revolver
             </label>
           </div>

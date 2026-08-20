@@ -3,7 +3,6 @@ export function initSettings() {
   const selectStatusBarAlign = document.getElementById('configStatusBarAlign');
   const checkStatusBarAtiva = document.getElementById('configStatusBarAtiva');
 
-  // recuperando o gerenciamento da barra de status que havia sido perdido
   if (selectStatusBarPos && selectStatusBarAlign) {
     chrome.storage.local.get(['statusBarPos'], (res) => {
       const val = res.statusBarPos || 'bottom-center';
@@ -41,19 +40,34 @@ export function initSettings() {
     });
   }
 
-  // referenciando os elementos de configuracao de inicializacao atuais
   const checkAutoStart = document.getElementById('configAutoStart');
   const checkResume = document.getElementById('configAutoStartResume');
-  const selectModule = document.getElementById('configAutoStartModule');
+  const checkClicker = document.getElementById('configAutoStartClicker');
+  const checkRefresh = document.getElementById('configAutoStartRefresh');
+  const checkRevolver = document.getElementById('configAutoStartRevolver');
 
-  if (checkAutoStart && checkResume && selectModule) {
-    // buscando os estados atuais no banco e preenchendo a ui
-    chrome.storage.local.get(['autoStartEnabled', 'autoStartResume', 'autoStartModule'], (res) => {
+  if (checkAutoStart && checkResume && checkClicker && checkRefresh && checkRevolver) {
+    chrome.storage.local.get(['autoStartEnabled', 'autoStartResume', 'autoStartModules'], (res) => {
       checkAutoStart.checked = res.autoStartEnabled || false;
       checkResume.checked = res.autoStartResume || false;
-      selectModule.value = res.autoStartModule || 'revolver';
+
+      const modulos = res.autoStartModules || { clicker: false, refresh: false, revolver: false };
+      checkClicker.checked = modulos.clicker;
+      checkRefresh.checked = modulos.refresh;
+      checkRevolver.checked = modulos.revolver;
+
       atualizoVisibilidadeDosControles();
     });
+
+    const salvarEstadoModulos = () => {
+      chrome.storage.local.set({
+        autoStartModules: {
+          clicker: checkClicker.checked,
+          refresh: checkRefresh.checked,
+          revolver: checkRevolver.checked
+        }
+      });
+    };
 
     checkAutoStart.addEventListener('change', (e) => {
       chrome.storage.local.set({ autoStartEnabled: e.target.checked });
@@ -65,14 +79,16 @@ export function initSettings() {
       atualizoVisibilidadeDosControles();
     });
 
-    selectModule.addEventListener('change', (e) => {
-      chrome.storage.local.set({ autoStartModule: e.target.value });
-    });
+    checkClicker.addEventListener('change', salvarEstadoModulos);
+    checkRefresh.addEventListener('change', salvarEstadoModulos);
+    checkRevolver.addEventListener('change', salvarEstadoModulos);
 
-    // controlo as dependencias visuais baseando-me no checkbox principal
     function atualizoVisibilidadeDosControles() {
       checkResume.disabled = !checkAutoStart.checked;
-      selectModule.disabled = !checkAutoStart.checked || checkResume.checked;
+      const modulosDesabilitados = !checkAutoStart.checked || checkResume.checked;
+      checkClicker.disabled = modulosDesabilitados;
+      checkRefresh.disabled = modulosDesabilitados;
+      checkRevolver.disabled = modulosDesabilitados;
     }
   }
 }

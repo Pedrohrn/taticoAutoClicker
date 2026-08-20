@@ -1,23 +1,18 @@
 let revolverIntervalo = null;
 let abaAtualIndex = 0;
 let autoRefreshTimerAtivo = false;
+let janelaRevolverId = null; // crio isso pra amarrar o revolver a janela onde ele for ativado
+let ignorarProximaAlteracaoPlaylist = false; // impesso o loop de storage gerado pelas minhas proprias gravacoes
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "updateBadge") {
     const textBadge = request.text || "";
-    chrome.action.setBadgeText({
-      text: textBadge,
-      tabId: sender.tab ? sender.tab.id : undefined
-    });
+    chrome.action.setBadgeText({ text: textBadge, tabId: sender.tab?.id });
 
     if (textBadge) {
-      chrome.action.setBadgeBackgroundColor({
-        color: request.color || "#17a2b8",
-        tabId: sender.tab ? sender.tab.id : undefined
-      });
+      chrome.action.setBadgeBackgroundColor({ color: request.color || "#17a2b8", tabId: sender.tab?.id });
     }
 
-    // marco se o timer assumiu o controle nesta sessao
     autoRefreshTimerAtivo = !!textBadge;
     if (!autoRefreshTimerAtivo) verificarReverterBadgeRevolver();
   }
@@ -34,21 +29,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 function atualizarBadgeRevolver(status) {
-  if (autoRefreshTimerAtivo) return; // delego prioridade ao timer
+  if (autoRefreshTimerAtivo) return;
 
-  if (status) {
-    chrome.action.setBadgeText({ text: "\u27F3" });
-    chrome.action.setBadgeBackgroundColor({ color: "#28a745" });
-  } else {
-    chrome.action.setBadgeText({ text: "OFF" });
-    chrome.action.setBadgeBackgroundColor({ color: "#6c757d" });
-  }
+  chrome.action.setBadgeText({ text: status ? "\u27F3" : "OFF" });
+  chrome.action.setBadgeBackgroundColor({ color: status ? "#28a745" : "#6c757d" });
 }
 
 function verificarReverterBadgeRevolver() {
-  chrome.storage.local.get(['revolverAtivo'], (data) => {
-    atualizarBadgeRevolver(!!data.revolverAtivo);
-  });
+  chrome.storage.local.get(['revolverAtivo'], (data) => atualizarBadgeRevolver(!!data.revolverAtivo));
 }
 
 function pararRotacaoAbas() {
@@ -59,81 +47,109 @@ function pararRotacaoAbas() {
   atualizarBadgeRevolver(false);
 }
 
-// checo se a url possui o curinga para regex ou sigo com match normal
 function validarMatchUrl(urlAba, urlCadastrada) {
   if (!urlCadastrada) return false;
   if (urlCadastrada.includes('*')) {
     const stringRegex = '^' + urlCadastrada.split('*').map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
-    const regex = new RegExp(stringRegex);
-    return regex.test(urlAba);
+    return new RegExp(stringRegex).test(urlAba);
   }
-  return urlAba.includes(urlCadastrada);
+
+  // mesma normalizacao do autoclicker para bater com exatidao URLs estritas
+  const normalize = (u) => {
+    try {
+      const obj = new URL(u.includes('http') ? u : 'https://' + u);
+      return obj.hostname.replace(/^www\./, '') + obj.pathname.replace(/\/$/, '') + obj.search;
+    } catch (e) {
+      return u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+    }
+  };
+  return normalize(urlAba) === normalize(urlCadastrada);
 }
 
 function iniciarRotacaoAbas() {
   pararRotacaoAbas();
 
-  chrome.storage.local.get(['revolverAtivo', 'playlistIdAtiva', 'playlists'], (data) => {
-    if (!data.revolverAtivo || !data.playlistIdAtiva) {
-      pararRotacaoAbas();
-      return;
-    }
+  chrome.storage.local.get(['revolverAtivo', 'playlistIdAtiva', 'playlists', 'perfis'], (data) => {
+    if (!data.revolverAtivo || !data.playlistIdAtiva) return pararRotacaoAbas();
 
-    const playlists = data.playlists || [];
-    const playlistAtual = playlists.find(p => p.id === data.playlistIdAtiva);
+    const playlistAtual = (data.playlists || []).find(p => p.id === data.playlistIdAtiva);
+    if (!playlistAtual || !playlistAtual.itens) return pararRotacaoAbas();
 
-    if (!playlistAtual || !playlistAtual.itens) {
-      pararRotacaoAbas();
-      return;
+    // travando processamento caso a validacao de dias e horas do perfil ativo falhe
+    if (playlistAtual.perfil_id) {
+      const perfil = (data.perfis || []).find(p => p.id === playlistAtual.perfil_id);
+      if (perfil) {
+        const hoje = new Date();
+        const diaAtual = hoje.getDay();
+        const horaStr = hoje.getHours().toString().padStart(2, '0') + ':' + hoje.getMinutes().toString().padStart(2, '0');
+
+        const diaValido = !perfil.dias_semana || perfil.dias_semana.length === 0 || perfil.dias_semana.includes(diaAtual);
+        const horaValida = !perfil.horario?.inicio || !perfil.horario?.fim || (horaStr >= perfil.horario.inicio && horaStr <= perfil.horario.fim);
+
+        if (!diaValido || !horaValida) {
+          console.log('Tatico Revolver: Standby aguardando janela de horários do perfil vinculado.');
+          revolverIntervalo = setTimeout(iniciarRotacaoAbas, 60000);
+          atualizarBadgeRevolver(false);
+          return;
+        }
+      }
     }
 
     const itensAtivos = playlistAtual.itens.filter(item => item.ativo);
-
-    if (itensAtivos.length === 0) {
-      pararRotacaoAbas();
-      return;
-    }
+    if (itensAtivos.length === 0) return pararRotacaoAbas();
 
     if (abaAtualIndex >= itensAtivos.length) abaAtualIndex = 0;
 
     const itemAtual = itensAtivos[abaAtualIndex];
     const tempoMs = ((itemAtual.minutos || 0) * 60 + (itemAtual.segundos || 10)) * 1000;
-    const targetTime = Date.now() + tempoMs;
 
     chrome.storage.local.set({
-      revolverTargetTime: targetTime,
+      revolverTargetTime: Date.now() + tempoMs,
       revolverCurrentIdx: abaAtualIndex + 1,
       revolverTotalItems: itensAtivos.length
     });
 
     atualizarBadgeRevolver(true);
 
-    chrome.tabs.query({ currentWindow: true }, (tabs) => {
+    const opcoesBusca = janelaRevolverId ? { windowId: janelaRevolverId } : { currentWindow: true };
+
+    chrome.tabs.query(opcoesBusca, (tabs) => {
+      // reseto e tento global se a janela atrelada deixar de existir/fechar sem querer
+      if (!tabs || tabs.length === 0) {
+        janelaRevolverId = null;
+        iniciarRotacaoAbas();
+        return;
+      }
+
+      if (!janelaRevolverId && tabs.length > 0) {
+        janelaRevolverId = tabs[0].windowId;
+      }
+
       const abaAlvo = tabs.find(t => t.url && validarMatchUrl(t.url, itemAtual.url));
       let ocorreuAlteracaoNoEstado = false;
 
       if (abaAlvo) {
         chrome.tabs.update(abaAlvo.id, { active: true });
 
-        // atualizo o item como aberto caso a extensao o tenha encontrado ativo
+        // checo tabs crashadas ou no limite de memoria pra forcar o reload
+        if (abaAlvo.discarded || abaAlvo.status === 'unloaded') {
+          console.log('Tatico Revolver: Guia descartada por limite de memoria. Recarregando.');
+          chrome.tabs.reload(abaAlvo.id, { bypassCache: true });
+        }
+
         if (!itemAtual.aberto) {
           itemAtual.aberto = true;
           ocorreuAlteracaoNoEstado = true;
         }
       } else if (itemAtual.url) {
-        // se nao achou a aba mas ela ja foi aberta antes, ignoro a criacao novamente para continuar a rotina
-        if (!itemAtual.aberto) {
-          // limpo o asterisco para tentar abrir ao menos o fallback da base url
-          const urlLimpaParaAbertura = itemAtual.url.replace(/\*/g, '');
-          chrome.tabs.create({ url: urlLimpaParaAbertura, active: true });
-          itemAtual.aberto = true;
-          ocorreuAlteracaoNoEstado = true;
-        }
+        chrome.tabs.create({ url: itemAtual.url.replace(/\*/g, ''), active: true, windowId: janelaRevolverId });
+        itemAtual.aberto = true;
+        ocorreuAlteracaoNoEstado = true;
       }
 
-      // salvo o status do objeto atualizado de volta no storage pra refletir em todas as interfaces
       if (ocorreuAlteracaoNoEstado) {
-        chrome.storage.local.set({ playlists: playlists });
+        ignorarProximaAlteracaoPlaylist = true;
+        chrome.storage.local.set({ playlists: data.playlists });
       }
 
       abaAtualIndex = (abaAtualIndex + 1) % itensAtivos.length;
@@ -144,50 +160,57 @@ function iniciarRotacaoAbas() {
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'local') {
-    if (changes.revolverAtivo || changes.playlistIdAtiva || changes.playlists) {
+    if (changes.revolverAtivo) {
       chrome.storage.local.get(['revolverAtivo'], (data) => {
         if (data.revolverAtivo) {
           abaAtualIndex = 0;
-          iniciarRotacaoAbas();
+          // amarrando a janela atual quando ativado
+          chrome.windows.getLastFocused({ populate: false }, (win) => {
+            janelaRevolverId = win ? win.id : null;
+            iniciarRotacaoAbas();
+          });
         } else {
+          janelaRevolverId = null;
           pararRotacaoAbas();
         }
+      });
+    } else if (changes.playlistIdAtiva) {
+      abaAtualIndex = 0;
+      iniciarRotacaoAbas();
+    } else if (changes.playlists) {
+      // ignoro meu proprio update do estado 'aberta' pra nao resetar a roleta atoa
+      if (ignorarProximaAlteracaoPlaylist) {
+        ignorarProximaAlteracaoPlaylist = false;
+        return;
+      }
+      chrome.storage.local.get(['revolverAtivo'], (data) => {
+        if (data.revolverAtivo) iniciarRotacaoAbas();
       });
     }
   }
 });
 
-// logica de inicializacao de sessao para evitar auto-start fantasma
 chrome.storage.session.get(['sessaoIniciada'], (sessionData) => {
-  if (!sessionData.sessaoIniciada) {
-    chrome.storage.session.set({ sessaoIniciada: true });
+  if (sessionData.sessaoIniciada) return retomarLoopsAdormecidos();
 
-    chrome.storage.local.get(['autoStartEnabled', 'autoStartResume', 'autoStartModules'], (config) => {
-      const autoStart = config.autoStartEnabled || false;
-      const resume = config.autoStartResume || false;
+  chrome.storage.session.set({ sessaoIniciada: true });
+
+  chrome.storage.local.get(['autoStartEnabled', 'autoStartResume', 'autoStartModules'], (config) => {
+    if (!config.autoStartEnabled) {
+      return chrome.storage.local.set({ revolverAtivo: false, autoClickerPaused: true, autoRefreshPaused: true });
+    }
+
+    if (!config.autoStartResume) {
       const modulos = config.autoStartModules || { clicker: false, refresh: false, revolver: false };
-
-      if (!autoStart) {
-        chrome.storage.local.set({
-          revolverAtivo: false,
-          autoClickerPaused: true,
-          autoRefreshPaused: true
-        });
-      } else {
-        if (!resume) {
-          chrome.storage.local.set({
-            revolverAtivo: modulos.revolver,
-            autoClickerPaused: !modulos.clicker,
-            autoRefreshPaused: !modulos.refresh
-          }, () => retomarLoopsAdormecidos());
-        } else {
-          retomarLoopsAdormecidos();
-        }
-      }
-    });
-  } else {
-    retomarLoopsAdormecidos();
-  }
+      chrome.storage.local.set({
+        revolverAtivo: modulos.revolver,
+        autoClickerPaused: !modulos.clicker,
+        autoRefreshPaused: !modulos.refresh
+      }, retomarLoopsAdormecidos);
+    } else {
+      retomarLoopsAdormecidos();
+    }
+  });
 });
 
 function retomarLoopsAdormecidos() {

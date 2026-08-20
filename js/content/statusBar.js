@@ -6,6 +6,7 @@ class TaticoStatusBarUI {
     this.isDragging = false;
     this.estado = {
       fechada: false,
+      exibirPeloPerfil: true, // prop responsavel por obedecer a diretriz individual das paginas e rotinas ativas
       minimizada: false,
       autoClickerPaused: false,
       autoRefreshPaused: false,
@@ -21,8 +22,10 @@ class TaticoStatusBarUI {
     };
   }
 
-  async inicializar(nomeRotinaAtiva) {
+  async inicializar(nomeRotinaAtiva, exibirPeloPerfil = true) {
+    this.estado.exibirPeloPerfil = exibirPeloPerfil;
     chrome.storage.local.set({ rotinaAtualNome: nomeRotinaAtiva || "Ativa" });
+
     const res = await chrome.storage.local.get([
       'statusBarPos', 'statusBarCoords', 'statusBarMinimized', 'statusBarClosed',
       'autoClickerPaused', 'autoRefreshPaused', 'revolverAtivo',
@@ -32,7 +35,9 @@ class TaticoStatusBarUI {
     this.posicao = res.statusBarPos || 'bottom-center';
     this.coords = res.statusBarCoords || null;
     this.estado.minimizada = !!res.statusBarMinimized;
-    this.estado.fechada = !!res.statusBarClosed;
+    // status unificado que valida se o chefao permitiu OU se a aba atual previu permissao customizada
+    this.estado.fechada = !!res.statusBarClosed || !this.estado.exibirPeloPerfil;
+
     this.estado.autoClickerPaused = !!res.autoClickerPaused;
     this.estado.autoRefreshPaused = !!res.autoRefreshPaused;
     this.estado.revolverAtivo = !!res.revolverAtivo;
@@ -61,7 +66,6 @@ class TaticoStatusBarUI {
     });
 
     window.addEventListener('resize', this.ajustarLimitesTela.bind(this));
-
     this.renderizarConteudo();
   }
 
@@ -89,6 +93,40 @@ class TaticoStatusBarUI {
     }
   }
 
+  obterIconeDirecao(minimizada) {
+    let direcao = 'bottom';
+
+    if (this.posicao !== 'custom') {
+      direcao = this.posicao.split('-')[0];
+    } else {
+      const x = this.coords?.x || 0;
+      const y = this.coords?.y || 0;
+
+      const distLeft = x;
+      const distRight = window.innerWidth - x;
+      const distTop = y;
+      const distBottom = window.innerHeight - y;
+
+      const min = Math.min(distLeft, distRight, distTop, distBottom);
+      if (min === distLeft) direcao = 'left';
+      else if (min === distRight) direcao = 'right';
+      else if (min === distTop) direcao = 'top';
+      else direcao = 'bottom';
+    }
+
+    if (minimizada) {
+      if (direcao === 'left') return '\u25B6';
+      if (direcao === 'right') return '\u25C0';
+      if (direcao === 'top') return '\u25BC';
+      return '\u25B2';
+    } else {
+      if (direcao === 'left') return '\u25C0';
+      if (direcao === 'right') return '\u25B6';
+      if (direcao === 'top') return '\u25B2';
+      return '\u25BC';
+    }
+  }
+
   renderizarConteudo() {
     if (!this.elemento || this.isDragging) return;
 
@@ -103,23 +141,14 @@ class TaticoStatusBarUI {
     if (this.estado.minimizada) {
       this.elemento.className = 'tatico-statusbar is-minimized';
       this.aplicarPosicaoECoordenadas();
-      this.elemento.innerHTML = `<div class="tsb-min-icon" title="Expandir Tatico">\u25B2</div>`;
+      const iconeMax = this.obterIconeDirecao(true);
+      this.elemento.innerHTML = `<div class="tsb-min-icon" title="Expandir Tatico">${iconeMax}</div>`;
       return;
     }
 
-    this.elemento.innerHTML = `
-      <div class="tsb-content">
-        <div class="tsb-drag-handle" title="Arraste para mover a barra">\u2630</div>
-        <button id="tsb-btn-ac" class="tsb-btn" title="Alternar AutoClicker"></button>
-        <button id="tsb-btn-ar" class="tsb-btn" title="Alternar AutoRefresh"></button>
-        <button id="tsb-btn-rev" class="tsb-btn" title="Alternar Revolver"></button>
-        <div class="tsb-controls-row">
-          <button id="tsb-btn-conf" class="tsb-btn tsb-icon-btn" title="Configurações">\u2699</button>
-          <button id="tsb-btn-min" class="tsb-btn tsb-icon-btn" title="Minimizar">\u25BC</button>
-          <button id="tsb-btn-close" class="tsb-btn tsb-icon-btn" title="Fechar (Reabrir via Popup)">\u2715</button>
-        </div>
-      </div>
-    `;
+    const iconeMin = this.obterIconeDirecao(false);
+
+    this.elemento.innerHTML = `<div class="tsb-content"><div class="tsb-drag-handle" title="Arraste para mover a barra">\u2630</div><button id="tsb-btn-ac" class="tsb-btn" title="Alternar AutoClicker"></button><button id="tsb-btn-ar" class="tsb-btn" title="Alternar AutoRefresh"></button><button id="tsb-btn-rev" class="tsb-btn" title="Alternar Revolver"></button><div class="tsb-controls-row"><button id="tsb-btn-conf" class="tsb-btn tsb-icon-btn" title="Configurações">\u2699</button><button id="tsb-btn-min" class="tsb-btn tsb-icon-btn" title="Minimizar">${iconeMin}</button><button id="tsb-btn-close" class="tsb-btn tsb-icon-btn" title="Fechar (Reabrir via Popup)">\u2715</button></div></div>`;
 
     this.aplicarPosicaoECoordenadas();
     this.atualizarApenasValores();
@@ -139,13 +168,14 @@ class TaticoStatusBarUI {
         if (this.estado.minimizada) this.elemento.classList.add('is-minimized');
 
         const isNearEdge = this.coords.x < 50 || this.coords.x + this.elemento.offsetWidth > window.innerWidth - 50;
+
         if (isNearEdge && !this.estado.minimizada) {
           this.elemento.classList.add('tsb-vertical');
         }
       } else {
-        // defino estado temporario baseado em calculo pra extrair default e gravar
         this.elemento.className = 'tatico-statusbar tsb-pos-bottom-center';
         const rect = this.elemento.getBoundingClientRect();
+
         this.coords = { x: rect.left, y: rect.top };
         this.aplicarPosicaoECoordenadas();
       }
@@ -226,8 +256,8 @@ class TaticoStatusBarUI {
     if (newX < 0) newX = 0;
     if (newY < 0) newY = 0;
 
-    // uso a posicao exata do mouse pra avaliar encostas laterais evitando colisoes do element container (flick)
     const isVertical = e.clientX < 50 || e.clientX > window.innerWidth - 50;
+
     if (isVertical) {
       this.elemento.classList.add('tsb-vertical');
     } else {
@@ -268,30 +298,41 @@ class TaticoStatusBarUI {
         if (changes.statusBarPos && changes.statusBarPos.newValue !== this.posicao) {
           this.posicao = changes.statusBarPos.newValue; mudouUi = true;
         }
-        if (changes.statusBarCoords) {
-          this.coords = changes.statusBarCoords.newValue; mudouUi = true;
+
+        if (changes.statusBarCoords !== undefined) {
+          this.coords = changes.statusBarCoords.newValue || null; mudouUi = true;
         }
+
         if (changes.statusBarMinimized) {
           this.estado.minimizada = !!changes.statusBarMinimized.newValue; mudouUi = true;
         }
+
         if (changes.statusBarClosed) {
-          this.estado.fechada = !!changes.statusBarClosed.newValue; mudouUi = true;
+          // refletindo a juncao da configuracao do chefao com a configuracao do perfil
+          this.estado.fechada = !!changes.statusBarClosed.newValue || !this.estado.exibirPeloPerfil;
+          mudouUi = true;
         }
+
         if (changes.autoClickerPaused) {
           this.estado.autoClickerPaused = !!changes.autoClickerPaused.newValue; mudouUi = true;
         }
+
         if (changes.autoRefreshPaused) {
           this.estado.autoRefreshPaused = !!changes.autoRefreshPaused.newValue; mudouUi = true;
         }
+
         if (changes.revolverAtivo) {
           this.estado.revolverAtivo = !!changes.revolverAtivo.newValue; mudouUi = true;
         }
+
         if (changes.revolverTargetTime) {
           this.estado.revolverTargetTime = changes.revolverTargetTime.newValue;
         }
+
         if (changes.revolverCurrentIdx) {
           this.estado.revolverCurrentIdx = changes.revolverCurrentIdx.newValue; mudouUi = true;
         }
+
         if (changes.revolverTotalItems) {
           this.estado.revolverTotalItems = changes.revolverTotalItems.newValue; mudouUi = true;
         }
@@ -305,6 +346,7 @@ class TaticoStatusBarUI {
     setInterval(() => {
       if (this.estado.revolverAtivo && this.estado.revolverTargetTime) {
         const restanteMs = this.estado.revolverTargetTime - Date.now();
+
         if (restanteMs > 0) {
           const seg = Math.ceil(restanteMs / 1000);
           const m = Math.floor(seg / 60);
@@ -313,6 +355,7 @@ class TaticoStatusBarUI {
         } else {
           this.estado.revolverTempoRestante = '0:00';
         }
+
         this.atualizarApenasValores();
       }
     }, 1000);
