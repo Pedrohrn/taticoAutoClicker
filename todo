@@ -52,3 +52,14 @@ testes:
 
 - CRIAR FUNCAO PRA RESETAR POSICAO DA BARRA DE STATUS!!!!!!!!!!!!!!!!!!
 - BARRA DE STATUS QUEBROU NA ULTIMA ALTERACAO DO STATUSBAR.JS E COMPONENTS.CSS
+
+
+### 20/08/2026
+  - autoscroller:
+    - perfil
+    - barra de status
+    - quantas paginas/linhas por /velocidade
+      - intervalo (a cada...)
+      - quantidade
+    - voltar ao inicio?
+      - quantidade de ciclos
