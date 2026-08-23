@@ -1,24 +1,21 @@
-let revolverIntervalo = null;
-let abaAtualIndex = 0;
-let autoRefreshTimerAtivo = false;
-let janelaRevolverId = null; // crio isso pra amarrar o revolver a janela onde ele for ativado
-let ignorarProximaAlteracaoPlaylist = false; // impesso o loop de storage gerado pelas minhas proprias gravacoes
+// isolando variaveis de execucao por janela (windowId)
+let revolverIntervalos = {};
+let abasAtuaisIndex = {};
+let ignorarProximaAlteracaoPlaylist = false;
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // respondendo dados do contexto atual para os content scripts
+  if (request.action === "getTabContext") {
+    sendResponse({ windowId: sender.tab?.windowId, tabId: sender.tab?.id });
+    return true;
+  }
+
   if (request.action === "updateBadge") {
     const textBadge = request.text || "";
     chrome.action.setBadgeText({ text: textBadge, tabId: sender.tab?.id });
-
     if (textBadge) {
       chrome.action.setBadgeBackgroundColor({ color: request.color || "#17a2b8", tabId: sender.tab?.id });
     }
-
-    autoRefreshTimerAtivo = !!textBadge;
-    if (!autoRefreshTimerAtivo) verificarReverterBadgeRevolver();
-  }
-
-  if (request.action === "obterStatusRevolver") {
-    sendResponse({ rodando: revolverIntervalo !== null });
   }
 
   if (request.action === "openOptions") {
@@ -28,23 +25,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-function atualizarBadgeRevolver(status) {
-  if (autoRefreshTimerAtivo) return;
-
-  chrome.action.setBadgeText({ text: status ? "\u27F3" : "OFF" });
-  chrome.action.setBadgeBackgroundColor({ color: status ? "#28a745" : "#6c757d" });
+// atualiza visualmente a extensao de acordo com o estado do revolver da janela atual
+function atualizarBadgeRevolver(windowId, status) {
+  chrome.tabs.query({ windowId, active: true }, (tabs) => {
+    if (tabs[0]) {
+      chrome.action.setBadgeText({ text: status ? "\u27F3" : "OFF", tabId: tabs[0].id });
+      chrome.action.setBadgeBackgroundColor({ color: status ? "#28a745" : "#6c757d", tabId: tabs[0].id });
+    }
+  });
 }
 
-function verificarReverterBadgeRevolver() {
-  chrome.storage.local.get(['revolverAtivo'], (data) => atualizarBadgeRevolver(!!data.revolverAtivo));
-}
-
-function pararRotacaoAbas() {
-  if (revolverIntervalo) {
-    clearTimeout(revolverIntervalo);
-    revolverIntervalo = null;
+function pararRotacaoAbas(windowId) {
+  if (revolverIntervalos[windowId]) {
+    clearTimeout(revolverIntervalos[windowId]);
+    delete revolverIntervalos[windowId];
   }
-  atualizarBadgeRevolver(false);
+  atualizarBadgeRevolver(windowId, false);
 }
 
 function validarMatchUrl(urlAba, urlCadastrada) {
@@ -54,26 +50,26 @@ function validarMatchUrl(urlAba, urlCadastrada) {
     return new RegExp(stringRegex).test(urlAba);
   }
 
-  // mesma normalizacao do autoclicker para bater com exatidao URLs estritas
   const normalize = (u) => {
     try {
       const obj = new URL(u.includes('http') ? u : 'https://' + u);
-      return obj.hostname.replace(/^www\./, '') + obj.pathname.replace(/\/$/, '') + obj.search;
+      return obj.hostname.replace(/^www\./, '') + obj.pathname.replace(/\/$/, '');
     } catch (e) {
-      return u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+      return u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('?')[0];
     }
   };
   return normalize(urlAba) === normalize(urlCadastrada);
 }
 
-function iniciarRotacaoAbas() {
-  pararRotacaoAbas();
+function iniciarRotacaoAbas(windowId) {
+  pararRotacaoAbas(windowId);
 
-  chrome.storage.local.get(['revolverAtivo', 'playlistIdAtiva', 'playlists', 'perfis'], (data) => {
-    if (!data.revolverAtivo || !data.playlistIdAtiva) return pararRotacaoAbas();
+  chrome.storage.local.get(['windowStates', 'playlists', 'perfis'], (data) => {
+    const wState = (data.windowStates || {})[windowId];
+    if (!wState || !wState.revolverAtivo || !wState.playlistIdAtiva) return pararRotacaoAbas(windowId);
 
-    const playlistAtual = (data.playlists || []).find(p => p.id === data.playlistIdAtiva);
-    if (!playlistAtual || !playlistAtual.itens) return pararRotacaoAbas();
+    const playlistAtual = (data.playlists || []).find(p => p.id === wState.playlistIdAtiva);
+    if (!playlistAtual || !playlistAtual.itens) return pararRotacaoAbas(windowId);
 
     // travando processamento caso a validacao de dias e horas do perfil ativo falhe
     if (playlistAtual.perfil_id) {
@@ -87,42 +83,36 @@ function iniciarRotacaoAbas() {
         const horaValida = !perfil.horario?.inicio || !perfil.horario?.fim || (horaStr >= perfil.horario.inicio && horaStr <= perfil.horario.fim);
 
         if (!diaValido || !horaValida) {
-          console.log('Tatico Revolver: Standby aguardando janela de horários do perfil vinculado.');
-          revolverIntervalo = setTimeout(iniciarRotacaoAbas, 60000);
-          atualizarBadgeRevolver(false);
+          console.log(`Tatico Revolver (Win ${windowId}): Standby aguardando janela de horários do perfil vinculado.`);
+          revolverIntervalos[windowId] = setTimeout(() => iniciarRotacaoAbas(windowId), 60000);
+          atualizarBadgeRevolver(windowId, false);
           return;
         }
       }
     }
 
     const itensAtivos = playlistAtual.itens.filter(item => item.ativo);
-    if (itensAtivos.length === 0) return pararRotacaoAbas();
+    if (itensAtivos.length === 0) return pararRotacaoAbas(windowId);
 
-    if (abaAtualIndex >= itensAtivos.length) abaAtualIndex = 0;
+    if (abasAtuaisIndex[windowId] === undefined || abasAtuaisIndex[windowId] >= itensAtivos.length) {
+      abasAtuaisIndex[windowId] = 0;
+    }
 
-    const itemAtual = itensAtivos[abaAtualIndex];
+    const itemAtual = itensAtivos[abasAtuaisIndex[windowId]];
     const tempoMs = ((itemAtual.minutos || 0) * 60 + (itemAtual.segundos || 10)) * 1000;
 
-    chrome.storage.local.set({
-      revolverTargetTime: Date.now() + tempoMs,
-      revolverCurrentIdx: abaAtualIndex + 1,
-      revolverTotalItems: itensAtivos.length
-    });
+    wState.revolverTargetTime = Date.now() + tempoMs;
+    wState.revolverCurrentIdx = abasAtuaisIndex[windowId] + 1;
+    wState.revolverTotalItems = itensAtivos.length;
 
-    atualizarBadgeRevolver(true);
+    chrome.storage.local.set({ windowStates: { ...data.windowStates, [windowId]: wState } });
+    atualizarBadgeRevolver(windowId, true);
 
-    const opcoesBusca = janelaRevolverId ? { windowId: janelaRevolverId } : { currentWindow: true };
-
-    chrome.tabs.query(opcoesBusca, (tabs) => {
-      // reseto e tento global se a janela atrelada deixar de existir/fechar sem querer
+    chrome.tabs.query({ windowId: parseInt(windowId) }, (tabs) => {
+      // resetando se a janela atrelada deixar de existir/fechar sem querer
       if (!tabs || tabs.length === 0) {
-        janelaRevolverId = null;
-        iniciarRotacaoAbas();
+        pararRotacaoAbas(windowId);
         return;
-      }
-
-      if (!janelaRevolverId && tabs.length > 0) {
-        janelaRevolverId = tabs[0].windowId;
       }
 
       const abaAlvo = tabs.find(t => t.url && validarMatchUrl(t.url, itemAtual.url));
@@ -131,9 +121,9 @@ function iniciarRotacaoAbas() {
       if (abaAlvo) {
         chrome.tabs.update(abaAlvo.id, { active: true });
 
-        // checo tabs crashadas ou no limite de memoria pra forcar o reload
+        // checando saude da tab para forcar o reload em tabs suspensas
         if (abaAlvo.discarded || abaAlvo.status === 'unloaded') {
-          console.log('Tatico Revolver: Guia descartada por limite de memoria. Recarregando.');
+          console.log(`Tatico Revolver (Win ${windowId}): Guia descartada por limite de memoria. Recarregando.`);
           chrome.tabs.reload(abaAlvo.id, { bypassCache: true });
         }
 
@@ -142,7 +132,7 @@ function iniciarRotacaoAbas() {
           ocorreuAlteracaoNoEstado = true;
         }
       } else if (itemAtual.url) {
-        chrome.tabs.create({ url: itemAtual.url.replace(/\*/g, ''), active: true, windowId: janelaRevolverId });
+        chrome.tabs.create({ url: itemAtual.url.replace(/\*/g, ''), active: true, windowId: parseInt(windowId) });
         itemAtual.aberto = true;
         ocorreuAlteracaoNoEstado = true;
       }
@@ -152,39 +142,42 @@ function iniciarRotacaoAbas() {
         chrome.storage.local.set({ playlists: data.playlists });
       }
 
-      abaAtualIndex = (abaAtualIndex + 1) % itensAtivos.length;
-      revolverIntervalo = setTimeout(iniciarRotacaoAbas, tempoMs);
+      abasAtuaisIndex[windowId] = (abasAtuaisIndex[windowId] + 1) % itensAtivos.length;
+      revolverIntervalos[windowId] = setTimeout(() => iniciarRotacaoAbas(windowId), tempoMs);
     });
   });
 }
 
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'local') {
-    if (changes.revolverAtivo) {
-      chrome.storage.local.get(['revolverAtivo'], (data) => {
-        if (data.revolverAtivo) {
-          abaAtualIndex = 0;
-          // amarrando a janela atual quando ativado
-          chrome.windows.getLastFocused({ populate: false }, (win) => {
-            janelaRevolverId = win ? win.id : null;
-            iniciarRotacaoAbas();
-          });
-        } else {
-          janelaRevolverId = null;
-          pararRotacaoAbas();
+    if (changes.windowStates) {
+      const oldStates = changes.windowStates.oldValue || {};
+      const newStates = changes.windowStates.newValue || {};
+
+      // iterando os estados de cada janela pra detectar ativacoes do revolver
+      for (const winId in newStates) {
+        const isNowActive = newStates[winId]?.revolverAtivo;
+        const wasActive = oldStates[winId]?.revolverAtivo;
+        const newPlaylistId = newStates[winId]?.playlistIdAtiva;
+        const oldPlaylistId = oldStates[winId]?.playlistIdAtiva;
+
+        if (isNowActive && (!wasActive || newPlaylistId !== oldPlaylistId)) {
+          if (!wasActive) abasAtuaisIndex[winId] = 0;
+          iniciarRotacaoAbas(parseInt(winId));
+        } else if (!isNowActive && wasActive) {
+          pararRotacaoAbas(parseInt(winId));
         }
-      });
-    } else if (changes.playlistIdAtiva) {
-      abaAtualIndex = 0;
-      iniciarRotacaoAbas();
+      }
     } else if (changes.playlists) {
-      // ignoro meu proprio update do estado 'aberta' pra nao resetar a roleta atoa
       if (ignorarProximaAlteracaoPlaylist) {
         ignorarProximaAlteracaoPlaylist = false;
         return;
       }
-      chrome.storage.local.get(['revolverAtivo'], (data) => {
-        if (data.revolverAtivo) iniciarRotacaoAbas();
+      chrome.storage.local.get(['windowStates'], (data) => {
+        const wStates = data.windowStates || {};
+        for (const winId in wStates) {
+          if (wStates[winId].revolverAtivo) iniciarRotacaoAbas(parseInt(winId));
+        }
       });
     }
   }
@@ -195,26 +188,34 @@ chrome.storage.session.get(['sessaoIniciada'], (sessionData) => {
 
   chrome.storage.session.set({ sessaoIniciada: true });
 
-  chrome.storage.local.get(['autoStartEnabled', 'autoStartResume', 'autoStartModules'], (config) => {
-    if (!config.autoStartEnabled) {
-      return chrome.storage.local.set({ revolverAtivo: false, autoClickerPaused: true, autoRefreshPaused: true });
-    }
+  chrome.storage.local.get(['autoStartEnabled', 'autoStartResume', 'autoStartModules', 'windowStates'], (config) => {
+    let wStates = config.windowStates || {};
 
-    if (!config.autoStartResume) {
-      const modulos = config.autoStartModules || { clicker: false, refresh: false, revolver: false };
-      chrome.storage.local.set({
-        revolverAtivo: modulos.revolver,
-        autoClickerPaused: !modulos.clicker,
-        autoRefreshPaused: !modulos.refresh
-      }, retomarLoopsAdormecidos);
-    } else {
-      retomarLoopsAdormecidos();
-    }
+    chrome.windows.getAll({}, (windows) => {
+      windows.forEach(win => {
+        if (!wStates[win.id]) wStates[win.id] = {};
+
+        if (!config.autoStartEnabled) {
+          wStates[win.id].revolverAtivo = false;
+          wStates[win.id].autoClickerPaused = true;
+          wStates[win.id].autoRefreshPaused = true;
+        } else if (!config.autoStartResume) {
+          const modulos = config.autoStartModules || { clicker: false, refresh: false, revolver: false };
+          wStates[win.id].revolverAtivo = modulos.revolver;
+          wStates[win.id].autoClickerPaused = !modulos.clicker;
+          wStates[win.id].autoRefreshPaused = !modulos.refresh;
+        }
+      });
+      chrome.storage.local.set({ windowStates: wStates }, retomarLoopsAdormecidos);
+    });
   });
 });
 
 function retomarLoopsAdormecidos() {
-  chrome.storage.local.get(['revolverAtivo'], (data) => {
-    if (data.revolverAtivo) iniciarRotacaoAbas();
+  chrome.storage.local.get(['windowStates'], (data) => {
+    const wStates = data.windowStates || {};
+    for (const winId in wStates) {
+      if (wStates[winId].revolverAtivo) iniciarRotacaoAbas(parseInt(winId));
+    }
   });
 }
