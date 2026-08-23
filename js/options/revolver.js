@@ -39,7 +39,7 @@ export function initRevolver() {
             } else if (nextPlaylistId) {
               chrome.storage.local.set({ revolverAtivo: true, playlistIdAtiva: nextPlaylistId });
             } else {
-              alert("Crie uma playlist primeiro para rodar o Revólver.");
+              alert("Crie uma playlist primeiro para rodar o Revolver.");
             }
           });
         });
@@ -49,7 +49,7 @@ export function initRevolver() {
     if (btnGlobal) {
       btnGlobal.className = `btn btn-sm ${isGlobalActive ? 'btn-danger' : 'btn-success'}`;
       btnGlobal.style.marginLeft = '10px';
-      btnGlobal.textContent = isGlobalActive ? '⏸ Pausar Todos' : '▶ Iniciar Revólver';
+      btnGlobal.textContent = isGlobalActive ? '⏸ Pausar Todos' : '▶ Iniciar Revolver';
     }
 
     if (playlistsSalvas.length === 0) {
