@@ -1,73 +1,96 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const btnToggleRevolver = document.getElementById('btnToggleRevolver');
   const btnToggleAutoClicker = document.getElementById('btnToggleAutoClicker');
   const btnToggleAutoRefresh = document.getElementById('btnToggleAutoRefresh');
   const btnToggleStatusBar = document.getElementById('btnToggleStatusBar');
   const btnResetStatusBar = document.getElementById('btnResetStatusBar');
   const btnOpcoes = document.getElementById('btnOpcoes');
+  const comboJanelaScope = document.getElementById('comboJanelaScope');
 
   const textoStatusRevolver = document.getElementById('textoStatusRevolver');
   const textoRotinaAtual = document.getElementById('textoRotinaAtual');
+
+  let currentWindowId = null;
+  let allWindows = [];
 
   function aplicarTema(tema) {
     document.documentElement.setAttribute('data-theme', tema);
   }
 
-  // resolvo o estado inicial de todas as features baseando-me exclusivamente no storage para evitar assincronia
-  chrome.storage.local.get([
-    'theme',
-    'statusBarClosed',
-    'autoClickerPaused',
-    'autoRefreshPaused',
-    'rotinaAtualNome',
-    'revolverAtivo'
-  ], (res) => {
-    const temaPadrao = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    aplicarTema(res.theme || temaPadrao);
-    textoRotinaAtual.textContent = res.rotinaAtualNome || "Nenhuma";
-    atualizarUiBotoes(res);
-    atualizarUiRevolver(res.revolverAtivo);
-  });
+  // listando todas as janelas ativas e populando o combobox de escopo
+  async function carregarJanelas() {
+    allWindows = await chrome.windows.getAll({ populate: true });
+    const currentWindow = await chrome.windows.getCurrent();
+    currentWindowId = currentWindow.id;
 
-  document.getElementById('btnToggleTheme').addEventListener('click', () => {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
-      (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    chrome.storage.local.set({ theme: isDark ? 'light' : 'dark' });
-  });
+    allWindows.forEach(win => {
+      const activeTab = win.tabs.find(t => t.active) || win.tabs[0];
+      const title = activeTab ? (activeTab.title.substring(0, 30) + (activeTab.title.length > 30 ? '...' : '')) : 'Janela Vazia';
+      const label = win.id === currentWindowId ? `Janela Atual (${title})` : `Janela ID: ${win.id} (${title})`;
 
-  function atualizarUiBotoes(estado) {
-    if (estado.autoClickerPaused !== undefined) {
-      if (estado.autoClickerPaused) {
-        btnToggleAutoClicker.textContent = "Retomar AutoClicker";
-        btnToggleAutoClicker.className = "btn btn-success btn-block";
-      } else {
-        btnToggleAutoClicker.textContent = "Pausar AutoClicker";
-        btnToggleAutoClicker.className = "btn btn-secondary btn-block";
-      }
+      const option = document.createElement('option');
+      option.value = win.id;
+      option.textContent = label;
+      comboJanelaScope.appendChild(option);
+    });
+
+    comboJanelaScope.value = currentWindowId.toString();
+  }
+
+  function getScopeIds() {
+    const val = comboJanelaScope.value;
+    return val === 'global' ? allWindows.map(w => w.id) : [parseInt(val)];
+  }
+
+  function lerEstadoDoEscopoSelecionado(windowStates) {
+    const ids = getScopeIds();
+    // se for global, considero ativo se alguma janela estiver ativa. se for especifica, leio a especifica
+    let clickerPaused = true;
+    let refreshPaused = true;
+    let revolverAtivo = false;
+
+    ids.forEach(id => {
+      const wState = windowStates[id] || {};
+      if (!wState.autoClickerPaused) clickerPaused = false;
+      if (!wState.autoRefreshPaused) refreshPaused = false;
+      if (wState.revolverAtivo) revolverAtivo = true;
+    });
+
+    atualizarUiBotoes(clickerPaused, refreshPaused);
+    atualizarUiRevolver(revolverAtivo);
+  }
+
+  async function atualizarEstadoNoStorage(chave, booleanoAtivo) {
+    const res = await chrome.storage.local.get(['windowStates']);
+    const wStates = res.windowStates || {};
+    const ids = getScopeIds();
+
+    ids.forEach(id => {
+      if (!wStates[id]) wStates[id] = { autoClickerPaused: false, autoRefreshPaused: false, revolverAtivo: false };
+      wStates[id][chave] = booleanoAtivo;
+    });
+
+    await chrome.storage.local.set({ windowStates: wStates });
+  }
+
+  function atualizarUiBotoes(clickerPaused, refreshPaused) {
+    if (clickerPaused) {
+      btnToggleAutoClicker.textContent = "Retomar AutoClicker";
+      btnToggleAutoClicker.className = "btn btn-success btn-block";
+    } else {
+      btnToggleAutoClicker.textContent = "Pausar AutoClicker";
+      btnToggleAutoClicker.className = "btn btn-secondary btn-block";
     }
 
-    if (estado.autoRefreshPaused !== undefined) {
-      if (estado.autoRefreshPaused) {
-        btnToggleAutoRefresh.textContent = "Retomar AutoRefresh";
-        btnToggleAutoRefresh.className = "btn btn-success btn-block";
-      } else {
-        btnToggleAutoRefresh.textContent = "Pausar AutoRefresh";
-        btnToggleAutoRefresh.className = "btn btn-secondary btn-block";
-      }
-    }
-
-    if (estado.statusBarClosed !== undefined) {
-      if (estado.statusBarClosed) {
-        btnToggleStatusBar.textContent = "Exibir Barra de Status UI";
-        btnToggleStatusBar.className = "btn btn-info btn-block";
-      } else {
-        btnToggleStatusBar.textContent = "Ocultar Barra de Status UI";
-        btnToggleStatusBar.className = "btn btn-secondary btn-block";
-      }
+    if (refreshPaused) {
+      btnToggleAutoRefresh.textContent = "Retomar AutoRefresh";
+      btnToggleAutoRefresh.className = "btn btn-success btn-block";
+    } else {
+      btnToggleAutoRefresh.textContent = "Pausar AutoRefresh";
+      btnToggleAutoRefresh.className = "btn btn-secondary btn-block";
     }
   }
 
-  // padronizo o comportamento visual do revolver espelhado no storage local
   function atualizarUiRevolver(ativo) {
     if (ativo) {
       textoStatusRevolver.textContent = "Rodando (ON)";
@@ -82,33 +105,75 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  await carregarJanelas();
+
+  chrome.storage.local.get(['theme', 'statusBarClosed', 'rotinaAtualNome', 'windowStates'], (res) => {
+    const temaPadrao = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    aplicarTema(res.theme || temaPadrao);
+    textoRotinaAtual.textContent = res.rotinaAtualNome || "Nenhuma";
+
+    if (res.statusBarClosed) {
+      btnToggleStatusBar.textContent = "Exibir Barra de Status UI";
+      btnToggleStatusBar.className = "btn btn-info btn-block";
+    }
+
+    lerEstadoDoEscopoSelecionado(res.windowStates || {});
+  });
+
+  comboJanelaScope.addEventListener('change', () => {
+    chrome.storage.local.get(['windowStates'], (res) => lerEstadoDoEscopoSelecionado(res.windowStates || {}));
+  });
+
+  document.getElementById('btnToggleTheme').addEventListener('click', () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+      (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    chrome.storage.local.set({ theme: isDark ? 'light' : 'dark' });
+  });
+
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
       if (changes.theme) aplicarTema(changes.theme.newValue);
-      if (changes.revolverAtivo) atualizarUiRevolver(changes.revolverAtivo.newValue);
-      if (changes.autoClickerPaused) atualizarUiBotoes({ autoClickerPaused: changes.autoClickerPaused.newValue });
-      if (changes.autoRefreshPaused) atualizarUiBotoes({ autoRefreshPaused: changes.autoRefreshPaused.newValue });
-      if (changes.statusBarClosed) atualizarUiBotoes({ statusBarClosed: changes.statusBarClosed.newValue });
+      if (changes.statusBarClosed) {
+        if (changes.statusBarClosed.newValue) {
+          btnToggleStatusBar.textContent = "Exibir Barra de Status UI";
+          btnToggleStatusBar.className = "btn btn-info btn-block";
+        } else {
+          btnToggleStatusBar.textContent = "Ocultar Barra de Status UI";
+          btnToggleStatusBar.className = "btn btn-secondary btn-block";
+        }
+      }
       if (changes.rotinaAtualNome) textoRotinaAtual.textContent = changes.rotinaAtualNome.newValue || "Nenhuma";
+      if (changes.windowStates) lerEstadoDoEscopoSelecionado(changes.windowStates.newValue || {});
     }
   });
 
-  btnToggleRevolver.addEventListener('click', () => {
-    chrome.storage.local.get(['revolverAtivo'], (res) => {
-      chrome.storage.local.set({ revolverAtivo: !res.revolverAtivo });
+  btnToggleRevolver.addEventListener('click', async () => {
+    const res = await chrome.storage.local.get(['windowStates', 'playlistIdAtiva']);
+    const wStates = res.windowStates || {};
+    const ids = getScopeIds();
+
+    const currentState = wStates[ids[0]]?.revolverAtivo || false;
+    const newState = !currentState;
+
+    ids.forEach(id => {
+      if (!wStates[id]) wStates[id] = { autoClickerPaused: false, autoRefreshPaused: false };
+      wStates[id].revolverAtivo = newState;
+      if (newState && res.playlistIdAtiva) wStates[id].playlistIdAtiva = res.playlistIdAtiva;
     });
+
+    await chrome.storage.local.set({ windowStates: wStates });
   });
 
-  btnToggleAutoClicker.addEventListener('click', () => {
-    chrome.storage.local.get(['autoClickerPaused'], (res) => {
-      chrome.storage.local.set({ autoClickerPaused: !res.autoClickerPaused });
-    });
+  btnToggleAutoClicker.addEventListener('click', async () => {
+    const res = await chrome.storage.local.get(['windowStates']);
+    const currentState = res.windowStates?.[getScopeIds()[0]]?.autoClickerPaused || false;
+    await atualizarEstadoNoStorage('autoClickerPaused', !currentState);
   });
 
-  btnToggleAutoRefresh.addEventListener('click', () => {
-    chrome.storage.local.get(['autoRefreshPaused'], (res) => {
-      chrome.storage.local.set({ autoRefreshPaused: !res.autoRefreshPaused });
-    });
+  btnToggleAutoRefresh.addEventListener('click', async () => {
+    const res = await chrome.storage.local.get(['windowStates']);
+    const currentState = res.windowStates?.[getScopeIds()[0]]?.autoRefreshPaused || false;
+    await atualizarEstadoNoStorage('autoRefreshPaused', !currentState);
   });
 
   btnToggleStatusBar.addEventListener('click', () => {
@@ -117,7 +182,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // forçando a redefinicao limpa da posicao para evitar herancas customizadas bugadas
   btnResetStatusBar.addEventListener('click', () => {
     chrome.storage.local.set({
       statusBarPos: 'bottom-center',
