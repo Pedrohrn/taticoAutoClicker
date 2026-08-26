@@ -22,6 +22,7 @@
       </div>
     </div>
 
+    <button class="nav-group-title" data-target="tab-autoscroll">AutoScroll</button>
     <button class="nav-group-title" data-target="tab-revolver">Auto Tab Revolver</button>
     <button class="nav-group-title" data-target="tab-configuracoes">Configurações Gerais</button>
 
@@ -288,6 +289,87 @@
       </div>
     </div>
 
+    <div id="tab-autoscroll" class="tab-content">
+      <div id="listaAutoScrollContainer">
+        <h2>Gerenciador de AutoScroll <button id="btnNovoAutoScroll" class="btn btn-success">+ Criar Configuração</button>
+        </h2>
+        <div class="flex-row">
+          <button id="btnExcluirAutoScroll" class="btn btn-sm btn-danger">Excluir Selecionados</button>
+        </div>
+        <table class="data-table" id="tabelaAutoScroll">
+          <thead>
+            <tr>
+              <th style="width:30px;"><input type="checkbox" id="chkAutoScrollAll"></th>
+              <th style="width:30px;">#</th>
+              <th>Nome</th>
+              <th>Perfil Vinculado</th>
+              <th style="width:220px; text-align:center;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="listaAutoScrollBody"></tbody>
+        </table>
+      </div>
+
+      <div id="formAutoScrollContainer" class="hidden">
+        <h2>Editando AutoScroll <button id="btnVoltarAutoScroll" class="btn btn-sm btn-secondary">Voltar</button></h2>
+
+        <div class="form-group">
+          <label>Nome da Configuração:</label>
+          <input type="text" id="autoScrollNome">
+        </div>
+        <div class="form-group">
+          <label>Perfil de Contexto (Obrigatório):</label>
+          <select id="scrollPerfilId"></select>
+        </div>
+
+        <fieldset style="padding: 15px; margin-bottom: 15px;">
+          <legend>Ação de Scroll</legend>
+          <div class="form-group flex-row">
+            <label style="margin:0; margin-right: 15px;">Unidade de Rolagem:</label>
+            <label class="checkbox-label"><input type="radio" name="scrollUnidade" value="pages" checked> Páginas
+              (Viewport)</label>
+            <label class="checkbox-label"><input type="radio" name="scrollUnidade" value="lines"> Linhas/Pixels</label>
+          </div>
+
+          <div class="form-group flex-row">
+            <label>Quantidade por ação:</label>
+            <input type="number" id="autoScrollQuantidade" value="1" min="0.1" step="0.1"
+              style="width:80px; margin-left:10px;">
+          </div>
+
+          <div class="form-group flex-row">
+            <label>Intervalo (a cada):</label>
+            <input type="number" id="autoScrollIntervaloSeg" value="5" min="1"
+              style="width:80px; margin-left:10px; margin-right: 5px;"> segundos
+          </div>
+
+          <div class="form-group flex-row">
+            <label>Velocidade (Suavidade):</label>
+            <select id="autoScrollVelocidade" style="margin-left:10px;">
+              <option value="smooth">Suave (Smooth)</option>
+              <option value="auto">Instantâneo (Auto)</option>
+            </select>
+          </div>
+        </fieldset>
+
+        <fieldset style="padding: 15px; margin-bottom: 15px;">
+          <legend>Comportamento de Fim de Página</legend>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="autoScrollVoltarInicio"> Voltar ao início quando chegar ao fim da página?
+            </label>
+          </div>
+          <div class="form-group flex-row" id="containerScrollCiclos" style="margin-left: 25px;">
+            <label>Quantidade de ciclos (loops antes de parar):</label>
+            <input type="number" id="autoScrollCiclos" value="0" min="0" style="width:80px; margin-left:10px;">
+            <small style="margin-left:10px;">(Deixe 0 para infinito)</small>
+          </div>
+        </fieldset>
+
+        <button id="btnSalvarAutoScroll" class="btn btn-primary" style="margin-top: 15px;">Salvar Configuração</button>
+      </div>
+    </div>
+
     <div id="tab-configuracoes" class="tab-content">
       <h2>Configurações Gerais</h2>
 
@@ -340,6 +422,9 @@
             </label>
             <label for="configAutoStartRefresh" class="checkbox-label" style="margin-right: 15px;">
               <input type="checkbox" id="configAutoStartRefresh" disabled> AutoRefresh
+            </label>
+            <label for="configAutoStartScroll" class="checkbox-label">
+              <input type="checkbox" id="configAutoStartScroll" disabled> Auto Tab Scroll
             </label>
             <label for="configAutoStartRevolver" class="checkbox-label">
               <input type="checkbox" id="configAutoStartRevolver" disabled> Auto Tab Revolver

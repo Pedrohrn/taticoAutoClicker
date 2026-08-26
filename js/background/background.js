@@ -199,11 +199,13 @@ chrome.storage.session.get(['sessaoIniciada'], (sessionData) => {
           wStates[win.id].revolverAtivo = false;
           wStates[win.id].autoClickerPaused = true;
           wStates[win.id].autoRefreshPaused = true;
+          wStates[win.id].autoScrollPaused = true;
         } else if (!config.autoStartResume) {
-          const modulos = config.autoStartModules || { clicker: false, refresh: false, revolver: false };
+          const modulos = config.autoStartModules || { clicker: false, refresh: false, revolver: false, scroll: false };
           wStates[win.id].revolverAtivo = modulos.revolver;
           wStates[win.id].autoClickerPaused = !modulos.clicker;
           wStates[win.id].autoRefreshPaused = !modulos.refresh;
+          wStates[win.id].autoScrollPaused = !modulos.scroll;
         }
       });
       chrome.storage.local.set({ windowStates: wStates }, retomarLoopsAdormecidos);

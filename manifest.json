@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Tatico AutoClicker & Revolver",
-  "version": "3.0",
-  "description": "AutoClicker modular e Auto Tab Revolver para TVs Tatico",
+  "name": "Tatico Tools",
+  "version": "4.0",
+  "description": "AutoClicker modular, Auto Tab Revolver, AutoScroll e AutoRefresh Tatico",
   "permissions": [
     "activeTab",
     "scripting",
@@ -33,7 +33,8 @@
       ],
       "js": [
         "js/content/statusBar.js",
-        "js/content/autoClicker.js"
+        "js/content/autoClicker.js",
+        "js/content/autoScroll.js"
       ],
       "run_at": "document_end"
     }
