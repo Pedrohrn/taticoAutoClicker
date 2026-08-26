@@ -33,7 +33,8 @@
       ],
       "js": [
         "js/content/statusBar.js",
-        "js/content/autoClicker.js"
+        "js/content/autoClicker.js",
+        "js/content/autoScroll.js"
       ],
       "run_at": "document_end"
     }

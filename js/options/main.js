@@ -3,6 +3,7 @@ import { initRoutines } from './routine.js';
 import { initRevolver } from './revolver.js';
 import { initStorage } from './storage.js';
 import { initSettings } from './settings.js';
+import { initScroll } from './scroll.js';
 
 function garantirEstadoInicial(callbackInits) {
   chrome.storage.local.get(['perfis', 'rotinas', 'playlists', 'statusBarClosed'], (data) => {
@@ -67,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initRevolver();
     initStorage();
     initSettings();
+    initScroll();
   });
 
   const navGroupTitles = document.querySelectorAll('.nav-group-title');

@@ -179,10 +179,12 @@ export function initProfiles() {
 export function atualizarSelectRotinas(perfis) {
   const selRotina = document.getElementById('rotinaPerfilId');
   const selPlaylist = document.getElementById('playlistPerfilId');
+  const selScroll = document.getElementById('scrollPerfilId');
 
   const opcoesHTML = '<option value="">Sem Perfil Vinculado</option>' +
     perfis.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
 
   if (selRotina) selRotina.innerHTML = opcoesHTML;
   if (selPlaylist) selPlaylist.innerHTML = opcoesHTML;
+  if (selScroll) selScroll.innerHTML = opcoesHTML;
 }

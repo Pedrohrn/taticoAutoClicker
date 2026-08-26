@@ -45,16 +45,18 @@ export function initSettings() {
   const checkClicker = document.getElementById('configAutoStartClicker');
   const checkRefresh = document.getElementById('configAutoStartRefresh');
   const checkRevolver = document.getElementById('configAutoStartRevolver');
+  const checkScroll = document.getElementById('configAutoStartScroll');
 
   if (checkAutoStart && checkResume && checkClicker && checkRefresh && checkRevolver) {
     chrome.storage.local.get(['autoStartEnabled', 'autoStartResume', 'autoStartModules'], (res) => {
       checkAutoStart.checked = res.autoStartEnabled || false;
       checkResume.checked = res.autoStartResume || false;
 
-      const modulos = res.autoStartModules || { clicker: false, refresh: false, revolver: false };
+      const modulos = res.autoStartModules || { clicker: false, refresh: false, revolver: false, scroll: false };
       checkClicker.checked = modulos.clicker;
       checkRefresh.checked = modulos.refresh;
       checkRevolver.checked = modulos.revolver;
+      checkScroll.checked = modulos.scroll;
 
       atualizoVisibilidadeDosControles();
     });
@@ -64,7 +66,8 @@ export function initSettings() {
         autoStartModules: {
           clicker: checkClicker.checked,
           refresh: checkRefresh.checked,
-          revolver: checkRevolver.checked
+          revolver: checkRevolver.checked,
+          scroll: checkScroll.checked
         }
       });
     };
@@ -82,6 +85,7 @@ export function initSettings() {
     checkClicker.addEventListener('change', salvarEstadoModulos);
     checkRefresh.addEventListener('change', salvarEstadoModulos);
     checkRevolver.addEventListener('change', salvarEstadoModulos);
+    checkScroll.addEventListener('change', salvarEstadoModulos);
 
     function atualizoVisibilidadeDosControles() {
       checkResume.disabled = !checkAutoStart.checked;
@@ -89,6 +93,7 @@ export function initSettings() {
       checkClicker.disabled = modulosDesabilitados;
       checkRefresh.disabled = modulosDesabilitados;
       checkRevolver.disabled = modulosDesabilitados;
+      checkScroll.disabled = modulosDesabilitados;
     }
   }
 }

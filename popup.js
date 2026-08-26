@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnToggleRevolver = document.getElementById('btnToggleRevolver');
   const btnToggleAutoClicker = document.getElementById('btnToggleAutoClicker');
   const btnToggleAutoRefresh = document.getElementById('btnToggleAutoRefresh');
+  const btnToggleAutoScroll = document.getElementById('btnToggleAutoScroll');
   const btnToggleStatusBar = document.getElementById('btnToggleStatusBar');
   const btnResetStatusBar = document.getElementById('btnResetStatusBar');
   const btnOpcoes = document.getElementById('btnOpcoes');
@@ -47,16 +48,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     // se for global, considero ativo se alguma janela estiver ativa. se for especifica, leio a especifica
     let clickerPaused = true;
     let refreshPaused = true;
+    let scrollPaused = true;
     let revolverAtivo = false;
 
     ids.forEach(id => {
       const wState = windowStates[id] || {};
       if (!wState.autoClickerPaused) clickerPaused = false;
       if (!wState.autoRefreshPaused) refreshPaused = false;
+      if (!wState.autoScrollPaused) scrollPaused = false;
       if (wState.revolverAtivo) revolverAtivo = true;
     });
 
-    atualizarUiBotoes(clickerPaused, refreshPaused);
+    atualizarUiBotoes(clickerPaused, refreshPaused, scrollPaused);
     atualizarUiRevolver(revolverAtivo);
   }
 
@@ -66,14 +69,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const ids = getScopeIds();
 
     ids.forEach(id => {
-      if (!wStates[id]) wStates[id] = { autoClickerPaused: false, autoRefreshPaused: false, revolverAtivo: false };
+      if (!wStates[id]) wStates[id] = { autoClickerPaused: false, autoRefreshPaused: false, autoScrollPaused: false, revolverAtivo: false };
       wStates[id][chave] = booleanoAtivo;
     });
 
     await chrome.storage.local.set({ windowStates: wStates });
   }
 
-  function atualizarUiBotoes(clickerPaused, refreshPaused) {
+  function atualizarUiBotoes(clickerPaused, refreshPaused, scrollPaused) {
     if (clickerPaused) {
       btnToggleAutoClicker.textContent = "Retomar AutoClicker";
       btnToggleAutoClicker.className = "btn btn-success btn-block";
@@ -88,6 +91,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       btnToggleAutoRefresh.textContent = "Pausar AutoRefresh";
       btnToggleAutoRefresh.className = "btn btn-secondary btn-block";
+    }
+
+    if (scrollPaused) {
+      btnToggleAutoScroll.textContent = "Retomar AutoScroll";
+      btnToggleAutoScroll.className = "btn btn-success btn-block";
+    } else {
+      btnToggleAutoScroll.textContent = "Pausar AutoScroll";
+      btnToggleAutoScroll.className = "btn btn-secondary btn-block";
     }
   }
 
@@ -156,7 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const newState = !currentState;
 
     ids.forEach(id => {
-      if (!wStates[id]) wStates[id] = { autoClickerPaused: false, autoRefreshPaused: false };
+      if (!wStates[id]) wStates[id] = { autoClickerPaused: false, autoRefreshPaused: false, autoScrollPaused: false };
       wStates[id].revolverAtivo = newState;
       if (newState && res.playlistIdAtiva) wStates[id].playlistIdAtiva = res.playlistIdAtiva;
     });
@@ -174,6 +185,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await chrome.storage.local.get(['windowStates']);
     const currentState = res.windowStates?.[getScopeIds()[0]]?.autoRefreshPaused || false;
     await atualizarEstadoNoStorage('autoRefreshPaused', !currentState);
+  });
+
+  btnToggleAutoScroll.addEventListener('click', async () => {
+    const res = await chrome.storage.local.get(['windowStates']);
+    const currentState = res.windowStates?.[getScopeIds()[0]]?.autoScrollPaused || false;
+    await atualizarEstadoNoStorage('autoScrollPaused', !currentState);
   });
 
   btnToggleStatusBar.addEventListener('click', () => {

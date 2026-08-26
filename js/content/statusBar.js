@@ -11,6 +11,7 @@ class TaticoStatusBarUI {
       minimizada: false,
       autoClickerPaused: false,
       autoRefreshPaused: false,
+      autoScrollPaused: false,
       revolverAtivo: false,
       passoAtual: 0,
       passoTotal: 0,
@@ -39,6 +40,7 @@ class TaticoStatusBarUI {
     // lidanco com estados isolados
     this.estado.autoClickerPaused = !!wState.autoClickerPaused;
     this.estado.autoRefreshPaused = !!wState.autoRefreshPaused;
+    this.estado.autoScrollPaused = !!wState.autoScrollPaused;
     this.estado.revolverAtivo = !!wState.revolverAtivo;
     this.estado.revolverTargetTime = wState.revolverTargetTime || 0;
     this.estado.revolverCurrentIdx = wState.revolverCurrentIdx || 0;
@@ -145,7 +147,19 @@ class TaticoStatusBarUI {
 
     const iconeMin = this.obterIconeDirecao(false);
 
-    this.elemento.innerHTML = `<div class="tsb-content"><div class="tsb-drag-handle" title="Arraste para mover a barra">\u2630</div><button id="tsb-btn-ac" class="tsb-btn" title="Alternar AutoClicker"></button><button id="tsb-btn-ar" class="tsb-btn" title="Alternar AutoRefresh"></button><button id="tsb-btn-rev" class="tsb-btn" title="Alternar Revolver"></button><div class="tsb-controls-row"><button id="tsb-btn-conf" class="tsb-btn tsb-icon-btn" title="Configurações">\u2699</button><button id="tsb-btn-min" class="tsb-btn tsb-icon-btn" title="Minimizar">${iconeMin}</button><button id="tsb-btn-close" class="tsb-btn tsb-icon-btn" title="Fechar (Reabrir via Popup)">\u2715</button></div></div>`;
+    this.elemento.innerHTML = `
+    <div class="tsb-content">
+      <div class="tsb-drag-handle" title="Arraste para mover a barra">\u2630</div>
+      <button id="tsb-btn-ac" class="tsb-btn" title="Alternar AutoClicker"></button>
+      <button id="tsb-btn-ar" class="tsb-btn" title="Alternar AutoRefresh"></button>
+      <button id="tsb-btn-as" class="tsb-btn" title="Alternar AutoScroll"></button>
+      <button id="tsb-btn-rev" class="tsb-btn" title="Alternar Revolver"></button>
+      <div class="tsb-controls-row">
+        <button id="tsb-btn-conf" class="tsb-btn tsb-icon-btn" title="Configurações">\u2699</button>
+        <button id="tsb-btn-min" class="tsb-btn tsb-icon-btn" title="Minimizar">${iconeMin}</button>
+        <button id="tsb-btn-close" class="tsb-btn tsb-icon-btn" title="Fechar (Reabrir via Popup)">\u2715</button>
+      </div>
+    </div>`;
 
     this.aplicarPosicaoECoordenadas();
     this.atualizarApenasValores();
@@ -202,6 +216,10 @@ class TaticoStatusBarUI {
 
     document.getElementById('tsb-btn-ar')?.addEventListener('click', () => {
       this.alternarStatusGlobal('autoRefreshPaused', this.estado.autoRefreshPaused);
+    });
+
+    document.getElementById('tsb-btn-as')?.addEventListener('click', () => {
+      this.alternarStatusGlobal('autoScrollPaused', this.estado.autoScrollPaused);
     });
 
     document.getElementById('tsb-btn-rev')?.addEventListener('click', () => {
@@ -311,6 +329,9 @@ class TaticoStatusBarUI {
             if (this.estado.autoRefreshPaused !== wState.autoRefreshPaused) {
               this.estado.autoRefreshPaused = !!wState.autoRefreshPaused; mudouUi = true;
             }
+            if (this.estado.autoScrollPaused !== wState.autoScrollPaused) {
+              this.estado.autoScrollPaused = !!wState.autoScrollPaused; mudouUi = true;
+            }
             if (this.estado.revolverAtivo !== wState.revolverAtivo) {
               this.estado.revolverAtivo = !!wState.revolverAtivo; mudouUi = true;
             }
@@ -363,6 +384,12 @@ class TaticoStatusBarUI {
       const iconeAcao = this.estado.autoRefreshPaused ? '\u25B6' : '\u23F8';
       const textoTempo = this.estado.tempoRefreshTexto || '--:--';
       btnAr.innerHTML = `${iconeAcao} AR: ${textoTempo}`;
+    }
+
+    const btnAs = this.elemento.querySelector('#tsb-btn-as');
+    if (btnAs) {
+      const iconeAcao = this.estado.autoScrollPaused ? '\u25B6' : '\u23F8';
+      btnAs.innerHTML = `${iconeAcao} AS`;
     }
 
     const btnRev = this.elemento.querySelector('#tsb-btn-rev');
