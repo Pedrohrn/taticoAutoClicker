@@ -266,9 +266,15 @@ function configurar_tk() {
 function pausar_tk() {
     _tk_sep
     systemctl --user stop tatico-chrome.service tatico-chrome-restart.timer
+
+    # removendo a trava do wmctrl que fixa o chrome acima de todas as outras janelas
+    wmctrl -x -r Google-chrome -b remove,above 2>/dev/null || wmctrl -r 'Google Chrome' -b remove,above 2>/dev/null
+
     local status=$?
     if [ "$status" -eq 0 ]; then
-        echo "Kiosk pausado (processos mantidos em execução)."
+        echo "Kiosk pausado e Chrome desfixado do primeiro plano."
+    else
+        echo "Kiosk pausado."
     fi
     _tk_timeout $status
 }
@@ -287,8 +293,12 @@ function resumir_tk() {
 # limpando processos zumbis e reiniciando o servico master
 function reiniciar_tk() {
     _tk_sep
-    killall -9 google-chrome google-chrome-stable 2>/dev/null || true
+
+    # efetuando o fechamento limpo via sigterm pro chrome ter a chance de gravar o historico de sessoes da aba em disco
+    killall -15 google-chrome google-chrome-stable 2>/dev/null || true
     sleep 2
+    killall -9 google-chrome google-chrome-stable 2>/dev/null || true
+
     systemctl --user restart tatico-chrome.service
     local status=$?
     if [ "$status" -eq 0 ]; then
@@ -450,6 +460,29 @@ for p in paths:
         local sd_dir="$HOME/.config/systemd/user"
         mkdir -p "$sd_dir"
 
+        # criando um wrapper pra interceptar a chamada de inicio e controlar a injecao da url alvo no comando do chrome
+        cat << 'SH_EOF' > "$HOME/.tatico/start_chrome.sh"
+#!/bin/bash
+has_session=0
+for path in "$HOME/.config/google-chrome/Default/Sessions" "$HOME/snap/google-chrome/current/.config/google-chrome/Default/Sessions"; do
+    if [ -d "$path" ]; then
+        # busco por historico de abas com tamanho relevante indicando que ha dados a serem restaurados
+        if find "$path" -maxdepth 1 -name "Tabs_*" -type f -size +100c 2>/dev/null | grep -q .; then
+            has_session=1
+            break
+        fi
+    fi
+done
+
+# se percebo que tem sessoes pra restaurar, inicio o navegador sem passar a url pra que ele mesmo abra e recupere as abas. senao, forco a url alvo
+if [ "$has_session" -eq 1 ] || [ -z "$TK_TARGET_URL" ]; then
+    exec "$@"
+else
+    exec "$@" "$TK_TARGET_URL"
+fi
+SH_EOF
+        chmod +x "$HOME/.tatico/start_chrome.sh"
+
         cat << 'PY_EOF' > "$HOME/.tatico/clear_chrome_session.py"
 import json, os
 paths = [os.path.expanduser('~/.config/google-chrome/Default'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default')]
@@ -489,10 +522,11 @@ Type=simple
 KillMode=mixed
 Environment=TK_TV_TYPE=$tv
 Environment=DISPLAY=${DISPLAY:-:0}
-ExecStartPre=/bin/bash -c "killall -9 google-chrome google-chrome-stable 2>/dev/null || true; sleep 2"
+Environment="TK_TARGET_URL=$url"
+ExecStartPre=/bin/bash -c "killall -15 google-chrome google-chrome-stable 2>/dev/null || true; sleep 2; killall -9 google-chrome google-chrome-stable 2>/dev/null || true"
 ExecStartPre=/usr/bin/python3 %h/.tatico/clear_chrome_session.py
-ExecStartPre=/bin/bash -c "sleep 5"
-ExecStart=$bin $chrome_flags "$url"
+ExecStartPre=/bin/bash -c "sleep 3"
+ExecStart=%h/.tatico/start_chrome.sh $bin $chrome_flags
 ExecStartPost=/bin/bash -c "for i in {1..20}; do wmctrl -x -r Google-chrome -b add,fullscreen,above 2>/dev/null || wmctrl -r 'Google Chrome' -b add,fullscreen,above 2>/dev/null && break; sleep 2; done"
 Restart=always
 RestartSec=10
@@ -532,8 +566,10 @@ SYS_EOF
 
 case "$acao" in
     install)
+        # efetuando fechamento brando para preservar sessoes de login antes da exclusao pesada
+        killall -15 google-chrome google-chrome-stable 2>/dev/null || true
+        sleep 10
         killall -9 google-chrome google-chrome-stable 2>/dev/null || true
-        sleep 2
 
         mkdir -p "$ext_dir"
         cd "$ext_dir" || exit 1
