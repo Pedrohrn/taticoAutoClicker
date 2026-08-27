@@ -184,7 +184,6 @@ export function initRevolver() {
       refresh_min: parseInt(tr.querySelector('.item-ref-min').value, 10) || 0,
       refresh_seg: parseInt(tr.querySelector('.item-ref-seg').value, 10) || 0,
       ativo: tr.querySelector('.item-ativo').checked,
-      principal: tr.querySelector('input[name="item-principal"]').checked,
       aberto: pl.itens[idx]?.aberto || false
     }));
   }
@@ -195,7 +194,7 @@ export function initRevolver() {
       const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
       tabs.forEach(tab => {
         if (tab.url && !tab.url.startsWith('chrome://') && !tab.url.startsWith('edge://')) {
-          pl.itens.push({ url: tab.url, minutos: 0, segundos: 15, refresh_min: 0, refresh_seg: 0, ativo: true, principal: false, aberto: false });
+          pl.itens.push({ url: tab.url, minutos: 0, segundos: 15, refresh_min: 0, refresh_seg: 0, ativo: true, aberto: false });
         }
       });
       renderizarItens();
@@ -235,7 +234,7 @@ export function initRevolver() {
   document.getElementById('btnAdicionarItemRevolver').addEventListener('click', () => {
     sincronizarDom();
     const pl = playlistsSalvas.find(p => p.id === playlistEmEdicaoId);
-    pl.itens.push({ url: '', minutos: 0, segundos: 10, refresh_min: 0, refresh_seg: 0, ativo: true, principal: pl.itens.length === 0, aberto: false });
+    pl.itens.push({ url: '', minutos: 0, segundos: 10, refresh_min: 0, refresh_seg: 0, ativo: true, aberto: false });
     renderizarItens();
   });
 
