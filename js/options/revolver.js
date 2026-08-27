@@ -124,6 +124,8 @@ export function initRevolver() {
     });
   });
 
+  let dragItemRevolverIndex = null;
+
   function renderizarItens() {
     const tbody = document.getElementById('playlistItensBody');
     tbody.innerHTML = '';
@@ -138,9 +140,13 @@ export function initRevolver() {
     pl.itens.forEach((it, idx) => {
       const isAberto = it.aberto ? '<span style="color:var(--success); font-size:0.8em; margin-left:5px;">(Aberto)</span>' : '';
       const tr = document.createElement('tr');
+      tr.dataset.index = idx;
+
+      tr.draggable = false;
 
       tr.innerHTML = `
       <td style="text-align:center;"><input type="checkbox" class="chk-item-revolver" data-idx="${idx}"></td>
+      <td class="drag-handle" style="cursor:grab; font-size:18px; color:#6c757d;" title="Arraste para reordenar">☰</td>
       <td>${idx + 1}</td>
       <td><input type="text" class="item-url input-no-shrink" value="${it.url}" placeholder="https://... ou wildcard *">${isAberto}</td>
       <td>
@@ -156,9 +162,35 @@ export function initRevolver() {
       </div>
       </td>
       <td style="text-align:center;"><input type="checkbox" class="item-ativo" ${it.ativo ? 'checked' : ''}></td>
-      <td style="text-align:center;"><input type="radio" name="item-principal" ${it.principal ? 'checked' : ''}></td>
-      <td style="text-align:center;"><button class="btn-danger-sm btn-remover-item" data-idx="${idx}" title="Excluir">X</button></td>
+      <td style="text-align:center;">
+        <div class="action-buttons">
+          <button class="btn btn-sm btn-danger btn-remover-item" data-idx="${idx}" title="Excluir">🗑</button>
+        </div>
+      </td>
       `;
+
+      const dragHandle = tr.querySelector('.drag-handle');
+      if (dragHandle) {
+        dragHandle.addEventListener('mousedown', () => tr.draggable = true);
+        dragHandle.addEventListener('mouseup', () => tr.draggable = false);
+        dragHandle.addEventListener('mouseleave', () => tr.draggable = false);
+      }
+
+      tr.addEventListener('dragstart', () => {
+        dragItemRevolverIndex = idx;
+      });
+
+      tr.addEventListener('dragover', (e) => e.preventDefault());
+
+      tr.addEventListener('drop', () => {
+        sincronizarDom();
+        if (dragItemRevolverIndex !== null && dragItemRevolverIndex !== idx) {
+          const movido = pl.itens.splice(dragItemRevolverIndex, 1)[0];
+          pl.itens.splice(idx, 0, movido);
+          renderizarItens();
+        }
+      });
+
       tbody.appendChild(tr);
     });
 
