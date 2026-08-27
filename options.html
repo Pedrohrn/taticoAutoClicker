@@ -14,14 +14,16 @@
       <img src="logo.png" alt="Tatico">
     </div>
 
-    <div class="nav-group open" id="group-autoclicker">
+    <!-- <div class="nav-group open" id="group-autoclicker">
       <button class="nav-group-title active-parent">AutoClicker</button>
       <div class="nav-submenus">
         <button class="nav-btn sub-btn" data-target="tab-perfis">Perfis</button>
         <button class="nav-btn sub-btn active" data-target="tab-rotinas">Rotinas</button>
       </div>
-    </div>
+    </div> -->
 
+    <button class="nav-group-title" data-target="tab-perfis">Perfis</button>
+    <button class="nav-group-title" data-target="tab-rotinas">AutoClicker</button>
     <button class="nav-group-title" data-target="tab-autoscroll">AutoScroll</button>
     <button class="nav-group-title" data-target="tab-revolver">Auto Tab Revolver</button>
     <button class="nav-group-title" data-target="tab-configuracoes">Configurações Gerais</button>
@@ -49,7 +51,6 @@
           <thead>
             <tr>
               <th style="width:30px;"><input type="checkbox" id="chkRotinasAll"></th>
-              <th style="width:30px;">#</th>
               <th>Nome</th>
               <th>Perfil Vinculado</th>
               <th>Tipo</th>
@@ -270,12 +271,12 @@
           <thead>
             <tr>
               <th style="width: 30px;"><input type="checkbox" id="chkSelectAll"></th>
+              <th style="width: 30px;"></th>
               <th style="width: 30px;">#</th>
               <th>URL</th>
               <th style="width: 120px;">Tempo (M:S)</th>
               <th style="width: 120px;">AutoRef (M:S)</th>
               <th style="width: 60px; text-align:center;">Ativa</th>
-              <th style="width: 80px; text-align:center;">Principal</th>
               <th style="width: 60px; text-align:center;">Ação</th>
             </tr>
           </thead>
@@ -300,7 +301,6 @@
           <thead>
             <tr>
               <th style="width:30px;"><input type="checkbox" id="chkAutoScrollAll"></th>
-              <th style="width:30px;">#</th>
               <th>Nome</th>
               <th>Perfil Vinculado</th>
               <th style="width:220px; text-align:center;">Ações</th>
@@ -424,7 +424,7 @@
               <input type="checkbox" id="configAutoStartRefresh" disabled> AutoRefresh
             </label>
             <label for="configAutoStartScroll" class="checkbox-label">
-              <input type="checkbox" id="configAutoStartScroll" disabled> Auto Tab Scroll
+              <input type="checkbox" id="configAutoStartScroll" disabled> Auto Scroll
             </label>
             <label for="configAutoStartRevolver" class="checkbox-label">
               <input type="checkbox" id="configAutoStartRevolver" disabled> Auto Tab Revolver

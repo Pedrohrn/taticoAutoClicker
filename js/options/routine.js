@@ -21,42 +21,33 @@ export function initRoutines() {
 
   function renderizarLista() {
     listaBody.innerHTML = '';
+
     rotinasLocais.forEach((r, idx) => {
       const tr = document.createElement('tr');
-      tr.draggable = true;
       tr.dataset.index = idx;
 
-      // procuro o nome do perfil
       const nomePerfil = perfisLocais.find(p => p.id === r.perfil_id)?.nome || 'Sem Perfil';
       const tipoRotina = r.tipo === 'simples' ? 'Simples' : 'Avançada';
       const statusRotina = r.ativa ? 'Ativa' : 'Pausada';
-      const textBtnToggle = r.ativa ? 'Pausar' : 'Ativar';
+      const titleBtnToggle = r.ativa ? 'Pausar' : 'Ativar';
+      const iconeBtnToggle = r.ativa ? '⏸' : '▶';
+      const classBtnToggle = r.ativa ? 'btn-action-primary' : 'btn-action-success';
 
       tr.innerHTML = `
-        <td><input type="checkbox" class="chk-rotina" data-id="${r.id}"></td>
-        <td class="drag-handle">☰</td>
-        <td>${r.nome}</td>
-        <td>${nomePerfil}</td>
-        <td>${tipoRotina}</td>
-        <td style="color:${r.ativa ? '#28a745' : '#dc3545'}; font-weight:bold;">${statusRotina}</td>
-        <td style="text-align:center; display:flex; gap:4px; justify-content:center;">
-          <button class="btn btn-sm ${r.ativa ? 'btn-secondary' : 'btn-success'} btn-toggle-r" data-id="${r.id}">${textBtnToggle}</button>
-          <button class="btn btn-sm btn-info btn-editar-r" data-id="${r.id}" style="background-color:#17a2b8;">Editar</button>
-          <button class="btn btn-sm btn-secondary btn-duplicar-r" data-id="${r.id}">Copiar</button>
-          <button class="btn btn-sm btn-danger btn-excluir-r" data-id="${r.id}">Excluir</button>
-        </td>
-      `;
-
-      tr.addEventListener('dragstart', () => { dragRotinaIndex = idx; });
-      tr.addEventListener('dragover', (e) => { e.preventDefault(); });
-      tr.addEventListener('drop', () => {
-        const targetIdx = idx;
-        if (dragRotinaIndex !== null && dragRotinaIndex !== targetIdx) {
-          const movida = rotinasLocais.splice(dragRotinaIndex, 1)[0];
-          rotinasLocais.splice(targetIdx, 0, movida);
-          salvarESincronizar();
-        }
-      });
+          <td><input type="checkbox" class="chk-rotina" data-id="${r.id}"></td>
+          <td>${r.nome}</td>
+          <td>${nomePerfil}</td>
+          <td>${tipoRotina}</td>
+          <td style="color:${r.ativa ? '#28a745' : '#dc3545'}; font-weight:bold;">${statusRotina}</td>
+          <td style="text-align:center;">
+            <div class="action-buttons">
+              <button class="btn-action ${classBtnToggle} btn-toggle-r" data-id="${r.id}" title="${titleBtnToggle}">${iconeBtnToggle}</button>
+              <button class="btn-action btn-action-info btn-editar-r" data-id="${r.id}" title="Editar">✎</button>
+              <button class="btn-action btn-action-primary btn-duplicar-r" data-id="${r.id}" title="Duplicar">⎘</button>
+              <button class="btn-action btn-action-danger btn-excluir-r" data-id="${r.id}" title="Excluir">🗑</button>
+            </div>
+          </td>
+          `;
 
       listaBody.appendChild(tr);
     });
@@ -166,7 +157,7 @@ export function initRoutines() {
     document.getElementById('rotinaUsaParada').checked = r.usa_parada || false;
     document.getElementById('rotinaParadaTipo').value = r.condicao_parada?.tipo || 'css';
     document.getElementById('rotinaParadaValor').value = r.condicao_parada?.valor_seletor || '';
-    
+
     document.getElementById('rotinaAutoRefresh').checked = r.autorefresh || false;
     document.getElementById('rotinaAutoRefMin').value = r.autorefresh_min || 0;
     document.getElementById('rotinaAutoRefSeg').value = r.autorefresh_seg || 0;
@@ -198,7 +189,6 @@ export function initRoutines() {
   function renderizarPassosAvancados() {
     const r = rotinasLocais.find(x => x.id === rotinaEditandoId);
 
-    // limpo o table head antigo se ainda existir no dom e injeto a div principal
     const container = document.getElementById('listaPassosBody');
     const headAntigo = document.getElementById('headPassosAvancados');
     if (headAntigo) headAntigo.style.display = 'none';
@@ -211,59 +201,58 @@ export function initRoutines() {
     r.passos_avancados.forEach((p, idx) => {
       const card = document.createElement('div');
       card.className = 'passo-card';
-      card.draggable = true;
       card.dataset.index = idx;
 
+      card.draggable = false;
+
       let regrasHtml = '';
+
       if (p.acao === 'click') {
         regrasHtml = `
-          <div class="passo-row">
-            <label>Qtd Clicks:</label> <input type="number" class="p-click-qtde" value="${p.click_qtde || 1}" style="width:60px;">
-            <label>Intervalo (ms):</label> <input type="number" step="1000" class="p-click-int" value="${p.click_intervalo_ms || 1000}" style="width:70px;">
-          </div>
-          <div class="passo-row">
-            <label>Parar se:</label>
-            <select class="p-click-stop-tipo" style="width:70px;">
-              <option value="css" ${p.parada_tipo === 'css' ? 'selected' : ''}>CSS</option>
-              <option value="xpath" ${p.parada_tipo === 'xpath' ? 'selected' : ''}>XPath</option>
-              <option value="text" ${p.parada_tipo === 'text' ? 'selected' : ''}>Texto</option>
-            </select>
-            <input type="text" class="p-click-stop" value="${p.parada_seletor || ''}" placeholder="Seletor">
-          </div>
-        `;
+            <div class="passo-row">
+              <label>Qtd:</label>
+              <input type="number" class="p-click-qtde" value="${p.click_qtde || 1}" style="width:60px;">
+              <label>Int(ms):</label>
+              <input type="number" step="100" class="p-click-int" value="${p.click_intervalo_ms || 1000}" style="width:80px;">
+              <label>Parar se:</label>
+              <select class="p-click-stop-tipo" style="width:80px;">
+                <option value="css" ${p.parada_tipo === 'css' ? 'selected' : ''}>CSS</option>
+                <option value="xpath" ${p.parada_tipo === 'xpath' ? 'selected' : ''}>XPath</option>
+                <option value="text" ${p.parada_tipo === 'text' ? 'selected' : ''}>Texto</option>
+              </select>
+              <input type="text" class="p-click-stop" value="${p.parada_seletor || ''}" placeholder="Seletor" style="flex:1; min-width:120px; max-width:250px;">
+            </div>
+            `;
       }
-      // block_wait foi removido, logo a renderizacao condicional para acao wait fica vazia para regras adicionais
 
       card.innerHTML = `
-        <div class="drag-handle" style="cursor:grab; font-size:18px; color:#6c757d;">☰</div>
-        <div class="passo-col">
-          <label>Ação:</label>
-          <select class="p-acao">
-            <option value="click" ${p.acao === 'click' ? 'selected' : ''}>Click</option>
-            <option value="wait" ${p.acao === 'wait' ? 'selected' : ''}>Aguardar</option>
-          </select>
-        </div>
-        <div class="passo-col">
-          <label>Tipo:</label>
-          <select class="p-tipo">
-            <option value="css" ${p.tipo_seletor === 'css' ? 'selected' : ''}>CSS</option>
-            <option value="xpath" ${p.tipo_seletor === 'xpath' ? 'selected' : ''}>XPath</option>
-            <option value="text" ${p.tipo_seletor === 'text' ? 'selected' : ''}>Texto</option>
-          </select>
-        </div>
-        <div class="passo-col" style="flex:2;">
-          <label>Alvo Principal:</label>
-          <input type="text" class="p-valor" value="${p.valor_seletor}">
-        </div>
-        <div class="passo-col">
-          <label>Atraso Inicial (ms):</label>
-          <input type="number" step="1000" class="p-delay" value="${p.delay_ms}">
-        </div>
-        <div class="passo-col-rules">${regrasHtml}</div>
-        <div>
-          <button class="btn btn-sm btn-danger btn-del-passo" data-idx="${idx}">X</button>
-        </div>
-      `;
+          <div class="drag-handle" style="cursor:grab; font-size:18px; color:#6c757d;" title="Arraste para reordenar">☰</div>
+          <div class="passo-col">
+            <label>Ação:</label>
+            <select class="p-acao">
+              <option value="click" ${p.acao === 'click' ? 'selected' : ''}>Click</option>
+              <option value="wait" ${p.acao === 'wait' ? 'selected' : ''}>Aguardar</option>
+            </select>
+          </div>
+          <div class="passo-col">
+            <label>Tipo:</label>
+            <select class="p-tipo">
+              <option value="css" ${p.tipo_seletor === 'css' ? 'selected' : ''}>CSS</option>
+              <option value="xpath" ${p.tipo_seletor === 'xpath' ? 'selected' : ''}>XPath</option>
+              <option value="text" ${p.tipo_seletor === 'text' ? 'selected' : ''}>Texto</option>
+            </select>
+          </div>
+          <div class="passo-col" style="flex:2;">
+            <label>Alvo Principal:</label>
+            <input type="text" class="p-valor" value="${p.valor_seletor}">
+          </div>
+          <div class="passo-col">
+            <label>Atraso Inicial (ms):</label>
+            <input type="number" step="1000" class="p-delay" value="${p.delay_ms}">
+          </div>
+          <div class="passo-col-rules">${regrasHtml}</div>
+          <button class="btn btn-danger btn-del-passo-abs btn-del-passo" data-idx="${idx}" title="Excluir">✖</button>
+          `;
 
       card.querySelector('.p-acao').addEventListener('change', (e) => {
         sincronizarPassosDom();
@@ -271,10 +260,24 @@ export function initRoutines() {
         renderizarPassosAvancados();
       });
 
-      card.addEventListener('dragstart', () => { dragStepIndex = idx; });
-      card.addEventListener('dragover', (e) => { e.preventDefault(); });
+      const dragHandle = card.querySelector('.drag-handle');
+      if (dragHandle) {
+        dragHandle.addEventListener('mousedown', () => card.draggable = true);
+        dragHandle.addEventListener('mouseup', () => card.draggable = false);
+        dragHandle.addEventListener('mouseleave', () => card.draggable = false);
+      }
+
+      card.addEventListener('dragstart', () => {
+        dragStepIndex = idx;
+      });
+
+      card.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+
       card.addEventListener('drop', () => {
         sincronizarPassosDom();
+
         if (dragStepIndex !== null && dragStepIndex !== idx) {
           const movido = r.passos_avancados.splice(dragStepIndex, 1)[0];
           r.passos_avancados.splice(idx, 0, movido);

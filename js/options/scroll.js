@@ -30,17 +30,19 @@ export function initScroll() {
       const perfilNome = perfisLocais.find(p => p.id === config.perfil_id)?.nome || 'Sem Perfil';
       const tr = document.createElement('tr');
 
-      // gerando exatamente 5 colunas espelhando o html: checkbox, index, nome, perfil, acoes
+      const titleBtnToggle = isRunning ? 'Pausar' : 'Ativar';
+      const iconeBtnToggle = isRunning ? '⏸' : '▶';
+      const classBtnToggle = isRunning ? 'btn-action-primary' : 'btn-action-success';
+
       tr.innerHTML = `
       <td style="text-align:center;"><input type="checkbox" class="chk-item-autoscroll" value="${config.id}"></td>
-      <td style="text-align:center; font-weight:bold; color: ${isRunning ? 'var(--success)' : 'var(--text-muted)'};" title="${isRunning ? 'Ativo' : 'Pausado'}">${idx + 1}</td>
       <td>${config.nome || 'Sem Nome'}</td>
       <td>${perfilNome}</td>
       <td style="text-align: center;">
         <div class="action-buttons">
-          <button class="btn btn-sm btn-secondary btn-toggle-as" data-id="${config.id}" title="${isRunning ? 'Pausar' : 'Rodar'}">${isRunning ? '⏸' : '▶'}</button>
-          <button class="btn btn-sm btn-info btn-editar-as" data-id="${config.id}" title="Editar">✎</button>
-          <button class="btn btn-sm btn-danger btn-excluir-as" data-id="${config.id}" title="Excluir">🗑</button>
+          <button class="btn-action ${classBtnToggle} btn-toggle-r" data-id="${config.id}" title="${titleBtnToggle}">${iconeBtnToggle}</button>
+          <button class="btn-action btn-action-info btn-editar-r" data-id="${config.id}" title="Editar">✎</button>
+          <button class="btn-action btn-action-danger btn-excluir-r" data-id="${config.id}" title="Excluir">🗑</button>
         </div>
       </td>
       `;

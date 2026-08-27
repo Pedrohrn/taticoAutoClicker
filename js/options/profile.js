@@ -61,8 +61,10 @@ export function initProfiles() {
         <td>${dias}</td>
         <td>${horario}</td>
         <td style="text-align:center;">
-          <button class="btn btn-sm btn-secondary btn-editar-p" data-id="${p.id}">Edit</button>
-          <button class="btn btn-sm btn-danger btn-excluir-p" data-id="${p.id}">Del</button>
+          <div class="action-buttons">
+            <button class="btn-action btn-action-info btn-editar-p" data-id="${p.id}" title="Editar">✎</button>
+            <button class="btn-action btn-action-danger btn-excluir-p" data-id="${p.id}" title="Excluir">🗑</button>
+          </div>
         </td>
       `;
       fragment.appendChild(tr);
