@@ -21,31 +21,33 @@ export function initRoutines() {
 
   function renderizarLista() {
     listaBody.innerHTML = '';
+
     rotinasLocais.forEach((r, idx) => {
       const tr = document.createElement('tr');
-      tr.draggable = true;
       tr.dataset.index = idx;
 
-      // procuro o nome do perfil
       const nomePerfil = perfisLocais.find(p => p.id === r.perfil_id)?.nome || 'Sem Perfil';
       const tipoRotina = r.tipo === 'simples' ? 'Simples' : 'Avançada';
       const statusRotina = r.ativa ? 'Ativa' : 'Pausada';
-      const textBtnToggle = r.ativa ? 'Pausar' : 'Ativar';
+      const titleBtnToggle = r.ativa ? 'Pausar' : 'Ativar';
+      const iconeBtnToggle = r.ativa ? '⏸' : '▶';
+      const classBtnToggle = r.ativa ? 'btn-action-primary' : 'btn-action-success';
 
       tr.innerHTML = `
-        <td><input type="checkbox" class="chk-rotina" data-id="${r.id}"></td>
-        <td class="drag-handle">☰</td>
-        <td>${r.nome}</td>
-        <td>${nomePerfil}</td>
-        <td>${tipoRotina}</td>
-        <td style="color:${r.ativa ? '#28a745' : '#dc3545'}; font-weight:bold;">${statusRotina}</td>
-        <td style="text-align:center; display:flex; gap:4px; justify-content:center;">
-          <button class="btn btn-sm ${r.ativa ? 'btn-secondary' : 'btn-success'} btn-toggle-r" data-id="${r.id}">${textBtnToggle}</button>
-          <button class="btn btn-sm btn-info btn-editar-r" data-id="${r.id}" style="background-color:#17a2b8;">Editar</button>
-          <button class="btn btn-sm btn-secondary btn-duplicar-r" data-id="${r.id}">Copiar</button>
-          <button class="btn btn-sm btn-danger btn-excluir-r" data-id="${r.id}">Excluir</button>
-        </td>
-      `;
+          <td><input type="checkbox" class="chk-rotina" data-id="${r.id}"></td>
+          <td>${r.nome}</td>
+          <td>${nomePerfil}</td>
+          <td>${tipoRotina}</td>
+          <td style="color:${r.ativa ? '#28a745' : '#dc3545'}; font-weight:bold;">${statusRotina}</td>
+          <td style="text-align:center;">
+            <div class="action-buttons">
+              <button class="btn-action ${classBtnToggle} btn-toggle-r" data-id="${r.id}" title="${titleBtnToggle}">${iconeBtnToggle}</button>
+              <button class="btn-action btn-action-info btn-editar-r" data-id="${r.id}" title="Editar">✎</button>
+              <button class="btn-action btn-action-primary btn-duplicar-r" data-id="${r.id}" title="Duplicar">⎘</button>
+              <button class="btn-action btn-action-danger btn-excluir-r" data-id="${r.id}" title="Excluir">🗑</button>
+            </div>
+          </td>
+          `;
 
       tr.addEventListener('dragstart', () => { dragRotinaIndex = idx; });
       tr.addEventListener('dragover', (e) => { e.preventDefault(); });
