@@ -49,17 +49,6 @@ export function initRoutines() {
           </td>
           `;
 
-      tr.addEventListener('dragstart', () => { dragRotinaIndex = idx; });
-      tr.addEventListener('dragover', (e) => { e.preventDefault(); });
-      tr.addEventListener('drop', () => {
-        const targetIdx = idx;
-        if (dragRotinaIndex !== null && dragRotinaIndex !== targetIdx) {
-          const movida = rotinasLocais.splice(dragRotinaIndex, 1)[0];
-          rotinasLocais.splice(targetIdx, 0, movida);
-          salvarESincronizar();
-        }
-      });
-
       listaBody.appendChild(tr);
     });
     vincularEventosLista();
