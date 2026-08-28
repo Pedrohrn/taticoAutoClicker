@@ -4,6 +4,20 @@ let abasAtuaisIndex = {};
 let ignorarProximaAlteracaoPlaylist = false;
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // if (request.action === "limparTudo") {
+  //   for (let wId in revolverIntervalos) pararRotacaoAbas(wId);
+  //   revolverIntervalos = {};
+  //   abasAtuaisIndex = {};
+
+  //   chrome.storage.local.clear(() => {
+  //     chrome.storage.session.clear(() => {
+  //       sendResponse({ ok: true });
+  //       chrome.runtime.reload();
+  //     });
+  //   });
+  //   return true;
+  // }
+
   if (request.action === "pararTudo") {
     for (let wId in revolverIntervalos) pararRotacaoAbas(wId);
     chrome.storage.local.set({ windowStates: {} }, () => {
