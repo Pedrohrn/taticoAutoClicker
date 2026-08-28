@@ -1,6 +1,34 @@
 let currentWindowId = null;
 let minhaPrioridadeMs = 0;
 
+window._taticoDebugState = {
+  rotinaAtual: null,
+  passoAtual: 0,
+  totalPassos: 0,
+  status: 'idle',
+  nomePasso: ''
+};
+
+window.debugTaticoTools = function (t = 0) {
+  if (window._debugTimer) clearInterval(window._debugTimer);
+
+  const printState = () => {
+    console.log("=== Tatico Tools Debug ===");
+    console.log(`Status Geral: ${window._taticoDebugState.status}`);
+    console.log(`Rotina Ativa: ${window._taticoDebugState.rotinaAtual || 'Nenhuma'}`);
+    console.log(`Progresso: Passo ${window._taticoDebugState.passoAtual} de ${window._taticoDebugState.totalPassos}`);
+    console.log(`Ação Atual: ${window._taticoDebugState.nomePasso || '-'}`);
+    console.log("==========================");
+  };
+
+  printState();
+
+  if (t > 0) {
+    window._debugTimer = setInterval(printState, t * 1000);
+    console.log(`debug tático: atualizando a cada ${t} segundos...`);
+  }
+};
+
 function matchComCoringa(urlAba, padrao) {
   if (!padrao) return false;
   if (padrao.includes('*')) {
@@ -48,7 +76,14 @@ async function resolverPausaAc() {
   while (true) {
     const res = await chrome.storage.local.get(['windowStates']);
     const isPaused = res.windowStates?.[currentWindowId]?.autoClickerPaused;
-    if (!isPaused) break;
+
+    if (!isPaused) {
+      if (window._taticoDebugState.status === 'paused') window._taticoDebugState.status = 'running';
+      break;
+    } else {
+      window._taticoDebugState.status = 'paused';
+    }
+
     await new Promise(r => setTimeout(r, 1000));
   }
 }
@@ -99,6 +134,10 @@ function iniciarAutoRefreshGlobally(min, seg) {
 
 async function executarRotinaAvancada(rotina) {
   console.log(`Iniciando Fila Avancada: ${rotina.nome}`);
+  window._taticoDebugState.rotinaAtual = rotina.nome;
+  window._taticoDebugState.totalPassos = rotina.passos_avancados.length;
+  window._taticoDebugState.status = 'running';
+
   let abortar = false;
   let qtdeExecutado = 0;
 
@@ -110,12 +149,24 @@ async function executarRotinaAvancada(rotina) {
     if (rotina.usa_parada && verificarParada(rotina.condicao_parada)) {
       console.log(`Fila abortada via Condicao de Parada Global: ${rotina.nome}`);
       abortar = true;
+      window._taticoDebugState.status = 'aborted';
       break;
     }
+
+    window._taticoDebugState.status = 'running';
 
     for (let index = 0; index < rotina.passos_avancados.length; index++) {
       const passo = rotina.passos_avancados[index];
       if (abortar) break;
+
+      // pulando passos desativados pela interface
+      if (passo.ativo === false) {
+        if (window.taticoUI) window.taticoUI.atualizarProgresso(index + 1, rotina.passos_avancados.length, 'done');
+        continue;
+      }
+
+      window._taticoDebugState.passoAtual = index + 1;
+      window._taticoDebugState.nomePasso = passo.acao === 'click' ? `Click: ${passo.valor_seletor}` : `Wait: ${passo.valor_seletor}`;
 
       await resolverPausaAc();
       if (window.taticoUI) window.taticoUI.atualizarProgresso(index + 1, rotina.passos_avancados.length, 'loading');
@@ -140,8 +191,7 @@ async function executarRotinaAvancada(rotina) {
 
           const alvo = encontrarElemento(passo.tipo_seletor, passo.valor_seletor);
           if (!alvo) {
-            if (cliquesFeitos > 0) { alvoEncontrado = true; break; }
-            await new Promise(res => setTimeout(res, 1000));
+            await new Promise(res => setTimeout(res, passo.click_intervalo_ms || 1000));
             continue;
           }
 
@@ -174,6 +224,8 @@ async function executarRotinaAvancada(rotina) {
     qtdeExecutado++;
   }
 
+  window._taticoDebugState.status = 'finished';
+
   if (rotina.acionar_revolver && rotina.revolver_playlist_id && !abortar) {
     console.log('Rotina concluida. Acionando Auto Tab Revolver no contexto desta janela...');
     setTimeout(async () => {
@@ -205,6 +257,7 @@ async function iniciarFilaRotinasSimples(rotina) {
       console.log(`Fila simples abortada via Condicao de Parada: ${rotina.nome}`);
       clearInterval(intervalo);
       if (window.taticoUI) window.taticoUI.atualizarProgresso(1, 1, 'done');
+      window._taticoDebugState.status = 'aborted';
       return;
     }
 
@@ -212,15 +265,28 @@ async function iniciarFilaRotinasSimples(rotina) {
     if (elemento) {
       elemento.click();
       if (window.taticoUI) window.taticoUI.atualizarProgresso(1, 1, 'done');
-      if (!cfg.clique_continuo) clearInterval(intervalo);
+      if (!cfg.clique_continuo) {
+        clearInterval(intervalo);
+        window._taticoDebugState.status = 'finished';
+      }
     } else {
       if (window.taticoUI) window.taticoUI.atualizarProgresso(1, 1, 'loading');
     }
   }, cfg.intermitencia_ms);
 }
 
+// garanto que os testes e amarracoes so ocorram quando a tela ja tiver totalmente em 'complete' status
 window.addEventListener('load', () => {
-  // descobrindo qual janela eu pertenço antes de mapear os processos
+  if (document.readyState !== 'complete') {
+    document.onreadystatechange = () => {
+      if (document.readyState === 'complete') inicializarExtensao();
+    };
+  } else {
+    inicializarExtensao();
+  }
+});
+
+function inicializarExtensao() {
   chrome.runtime.sendMessage({ action: "getTabContext" }, (context) => {
     if (!context || !context.windowId) return;
     currentWindowId = context.windowId;
@@ -320,4 +386,4 @@ window.addEventListener('load', () => {
       }
     });
   });
-});
+}

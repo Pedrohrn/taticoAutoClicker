@@ -450,6 +450,16 @@
   margin: 0;
 }
 
+.passo-avancado-item.passo-inativo {
+  opacity: 0.45;
+  filter: grayscale(80%);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.passo-avancado-item.passo-inativo:hover {
+  opacity: 0.7;
+}
+
 .passo-card input,
 .passo-card select {
   font-size: 12px;
