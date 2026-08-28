@@ -104,6 +104,7 @@ export function initRoutines() {
       tipo: 'simples',
       loop: false,
       qtde_execucoes: 1,
+      seletor_inicio: '',
       usa_parada: false,
       condicao_parada: { tipo: 'css', valor_seletor: '' },
       autorefresh: false,
@@ -154,6 +155,10 @@ export function initRoutines() {
 
     document.getElementById('rotinaLoop').checked = r.loop || false;
     document.getElementById('rotinaQtde').value = r.qtde_execucoes || 1;
+
+    const inputSeletorInicio = document.getElementById('rotinaSeletorInicio');
+    if (inputSeletorInicio) inputSeletorInicio.value = r.seletor_inicio || '';
+
     document.getElementById('rotinaUsaParada').checked = r.usa_parada || false;
     document.getElementById('rotinaParadaTipo').value = r.condicao_parada?.tipo || 'css';
     document.getElementById('rotinaParadaValor').value = r.condicao_parada?.valor_seletor || '';
@@ -323,7 +328,7 @@ export function initRoutines() {
   document.getElementById('btnAdicionarPasso').addEventListener('click', () => {
     sincronizarPassosDom();
     const r = rotinasLocais.find(x => x.id === rotinaEditandoId);
-    r.passos_avancados.push({ id: Date.now().toString(), acao: 'click', tipo_seletor: 'css', valor_seletor: '', delay_ms: 1000 });
+    r.passos_avancados.push({ id: Date.now().toString(), acao: 'click', ativo: true, tipo_seletor: 'css', valor_seletor: '', delay_ms: 1000 });
     renderizarPassosAvancados();
   });
 
@@ -344,6 +349,10 @@ export function initRoutines() {
 
     r.loop = document.getElementById('rotinaLoop').checked;
     r.qtde_execucoes = parseInt(document.getElementById('rotinaQtde').value, 10) || 1;
+
+    const inputSeletorInicio = document.getElementById('rotinaSeletorInicio');
+    if (inputSeletorInicio) r.seletor_inicio = inputSeletorInicio.value;
+
     r.usa_parada = document.getElementById('rotinaUsaParada').checked;
     r.condicao_parada.tipo = document.getElementById('rotinaParadaTipo').value;
     r.condicao_parada.valor_seletor = document.getElementById('rotinaParadaValor').value;

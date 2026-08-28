@@ -74,9 +74,9 @@ export function initRevolver() {
       </td>
       <td style="text-align: center;">
       <div class="action-buttons">
-      <button class="btn-action ${classBtnToggle} btn-toggle-r" data-id="${pl.id}" title="${titleBtnToggle}">${iconeBtnToggle}</button>
-      <button class="btn-action btn-action-info btn-editar-r" data-id="${pl.id}" title="Editar">✎</button>
-      <button class="btn-action btn-action-danger btn-excluir-r" data-id="${pl.id}" title="Excluir">🗑</button>
+      <button class="btn-action ${classBtnToggle} btn-toggle-pl" data-id="${pl.id}" title="${titleBtnToggle}">${iconeBtnToggle}</button>
+      <button class="btn-action btn-action-info btn-editar-pl" data-id="${pl.id}" title="Editar">✎</button>
+      <button class="btn-action btn-action-danger btn-excluir-pl" data-id="${pl.id}" title="Excluir">🗑</button>
       </div>
       </td>
       `;
@@ -165,7 +165,7 @@ export function initRevolver() {
       <input type="number" class="item-ref-seg input-no-shrink" value="${it.refresh_seg || 0}" style="width:45px;">
       </div>
       </td>
-      <td style="text-align:center;"><input type="checkbox" class="item-ativo" ${it.ativo ? 'checked' : ''}></td>
+      <td style="text-align:center;"><input type="checkbox" class="item-ativo chk-item-revolver-ativo" ${it.ativo ? 'checked' : ''}></td>
       <td style="text-align:center;">
         <div class="action-buttons">
           <button class="btn-action btn-action-danger btn-remover-item" data-idx="${idx}" title="Excluir">🗑</button>
@@ -247,10 +247,9 @@ export function initRevolver() {
   const btnMarcarTodos = document.getElementById('btnMarcarTodos');
   if (btnMarcarTodos) {
     btnMarcarTodos.addEventListener('click', () => {
-      const checkboxes = document.querySelectorAll('.chk-item-revolver');
+      const checkboxes = document.querySelectorAll('.chk-item-revolver-ativo');
       const todosMarcados = Array.from(checkboxes).every(chk => chk.checked);
       checkboxes.forEach(chk => chk.checked = !todosMarcados);
-      if (chkSelectAll) chkSelectAll.checked = !todosMarcados;
     });
   }
 

@@ -56,10 +56,22 @@ testes:
 
 ### 20/08/2026
   - autoscroller:
-    - perfil
-    - barra de status
-    - quantas paginas/linhas por /velocidade
-      - intervalo (a cada...)
-      - quantidade
-    - voltar ao inicio?
-      - quantidade de ciclos
+    - barra de status/popup
+      - com controles
+    - campos/configuracoes:
+      - perfil - deve ser vinculado ao perfil e ter as mesmas logicas de exibicao nos dias
+      - quantas paginas/linhas por acao de scroll
+        - intervalo (a cada...)
+      - velocidade
+      - voltar ao inicio? - pra quando chegar ao fim da pagina
+        - quantidade de ciclos - quantas vezes que, chegando no final, vai voltar pro inicio da pagina
+
+# statusBar.js
+
+
+### 25/08/2026
+
+
+  - script:
+    - atualizar o link, deixar sem o menu (acesso direto aos painéis)
+

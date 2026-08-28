@@ -53,6 +53,20 @@ async function resolverPausaAc() {
   }
 }
 
+// trava a execucao ate que o seletor obrigatorio de inicio exista na DOM
+async function aguardarSeletorInicio(seletor, tipo = 'css') {
+  if (!seletor) return;
+  console.log(`aguardando elemento gatilho para iniciar rotina: ${seletor}`);
+  window._taticoDebugState.status = 'waiting_trigger';
+  window._taticoDebugState.nomePasso = `Aguardando Gatilho Inicial: ${seletor}`;
+
+  while (true) {
+    if (encontrarElemento(tipo, seletor)) break;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  console.log(`gatilho inicial encontrado. disparando rotina...`);
+}
+
 function iniciarAutoRefreshGlobally(min, seg) {
   const timeMs = (min * 60 + seg) * 1000;
   if (timeMs <= 0) return;
@@ -87,6 +101,10 @@ async function executarRotinaAvancada(rotina) {
   console.log(`Iniciando Fila Avancada: ${rotina.nome}`);
   let abortar = false;
   let qtdeExecutado = 0;
+
+  if (rotina.seletor_inicio) {
+    await aguardarSeletorInicio(rotina.seletor_inicio, rotina.seletor_inicio_tipo || 'css');
+  }
 
   while (!abortar && (rotina.loop || qtdeExecutado < (rotina.qtde_execucoes || 1))) {
     if (rotina.usa_parada && verificarParada(rotina.condicao_parada)) {
@@ -171,6 +189,13 @@ async function executarRotinaAvancada(rotina) {
 
 async function iniciarFilaRotinasSimples(rotina) {
   const cfg = rotina.config_simples;
+  window._taticoDebugState.rotinaAtual = rotina.nome;
+  window._taticoDebugState.status = 'running';
+
+  if (rotina.seletor_inicio) {
+    await aguardarSeletorInicio(rotina.seletor_inicio, rotina.seletor_inicio_tipo || 'css');
+  }
+
   if (window.taticoUI) window.taticoUI.atualizarProgresso(1, 1, 'loading');
 
   const intervalo = setInterval(async () => {
