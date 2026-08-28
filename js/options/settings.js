@@ -96,4 +96,22 @@ export function initSettings() {
       checkScroll.disabled = modulosDesabilitados;
     }
   }
+
+  const btnLimparTudo = document.getElementById('btnLimparTudo');
+  if (btnLimparTudo) {
+    btnLimparTudo.addEventListener('click', () => {
+      if (confirm('ATENÇÃO: Tem certeza que deseja APAGAR TODAS as configurações, rotinas, playlists e perfis? Essa ação NÃO PODE SER DESFEITA.')) {
+        chrome.runtime.sendMessage({ action: "pararTudo" }, () => {
+          setTimeout(() => {
+            chrome.storage.local.clear(() => {
+              chrome.storage.session.clear(() => {
+                alert('Tatico Tools resetado com sucesso.');
+                chrome.runtime.reload();
+              });
+            });
+          }, 500);
+        });
+      }
+    });
+  }
 }

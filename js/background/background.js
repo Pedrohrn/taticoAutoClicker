@@ -4,6 +4,14 @@ let abasAtuaisIndex = {};
 let ignorarProximaAlteracaoPlaylist = false;
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "pararTudo") {
+    for (let wId in revolverIntervalos) pararRotacaoAbas(wId);
+    chrome.storage.local.set({ windowStates: {} }, () => {
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+
   // respondendo dados do contexto atual para os content scripts
   if (request.action === "getTabContext") {
     sendResponse({ windowId: sender.tab?.windowId, tabId: sender.tab?.id });
