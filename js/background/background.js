@@ -51,22 +51,36 @@ function pararRotacaoAbas(windowId) {
   atualizarBadgeRevolver(windowId, false);
 }
 
+// function validarMatchUrl(urlAba, urlCadastrada) {
+//   if (!urlCadastrada) return false;
+//   if (urlCadastrada.includes('*')) {
+//     const stringRegex = '^' + urlCadastrada.split('*').map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
+//     return new RegExp(stringRegex).test(urlAba);
+//   }
+
+//   const normalize = (u) => {
+//     try {
+//       const obj = new URL(u.includes('http') ? u : 'https://' + u);
+//       return obj.hostname.replace(/^www\./, '') + obj.pathname.replace(/\/$/, '');
+//     } catch (e) {
+//       return u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('?')[0];
+//     }
+//   };
+//   return normalize(urlAba) === normalize(urlCadastrada);
+// }
+
 function validarMatchUrl(urlAba, urlCadastrada) {
-  if (!urlCadastrada) return false;
+  if (!urlCadastrada || !urlAba) return false;
+
   if (urlCadastrada.includes('*')) {
     const stringRegex = '^' + urlCadastrada.split('*').map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*');
     return new RegExp(stringRegex).test(urlAba);
   }
 
-  const normalize = (u) => {
-    try {
-      const obj = new URL(u.includes('http') ? u : 'https://' + u);
-      return obj.hostname.replace(/^www\./, '') + obj.pathname.replace(/\/$/, '');
-    } catch (e) {
-      return u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('?')[0];
-    }
-  };
-  return normalize(urlAba) === normalize(urlCadastrada);
+  const cleanAba = urlAba.replace(/\/$/, '');
+  const cleanCadastrada = urlCadastrada.replace(/\/$/, '');
+
+  return cleanAba === cleanCadastrada;
 }
 
 function iniciarRotacaoAbas(windowId) {
