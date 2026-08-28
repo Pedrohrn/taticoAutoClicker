@@ -210,6 +210,9 @@ export function initRoutines() {
 
       card.draggable = false;
 
+      const isAtivo = p.ativo !== false;
+      card.style.opacity = isAtivo ? '1' : '0.5';
+
       let regrasHtml = '';
 
       if (p.acao === 'click') {
@@ -232,6 +235,10 @@ export function initRoutines() {
 
       card.innerHTML = `
           <div class="drag-handle" style="cursor:grab; font-size:18px; color:#6c757d;" title="Arraste para reordenar">☰</div>
+          <div class="passo-col" style="flex:0.5; text-align:center;">
+            <label>Ativo</label>
+            <input type="checkbox" class="p-ativo" ${isAtivo ? 'checked' : ''} title="Ativar/Desativar passo">
+          </div>
           <div class="passo-col">
             <label>Ação:</label>
             <select class="p-acao">
@@ -264,6 +271,14 @@ export function initRoutines() {
         r.passos_avancados[idx].acao = e.target.value;
         renderizarPassosAvancados();
       });
+
+      const chkAtivo = card.querySelector('.p-ativo');
+      if (chkAtivo) {
+        chkAtivo.addEventListener('change', () => {
+          sincronizarPassosDom();
+          renderizarPassosAvancados();
+        });
+      }
 
       const dragHandle = card.querySelector('.drag-handle');
       if (dragHandle) {
@@ -310,6 +325,7 @@ export function initRoutines() {
       const obj = {
         id: r.passos_avancados[i]?.id || Date.now().toString() + Math.random(),
         acao: acao,
+        ativo: card.querySelector('.p-ativo') ? card.querySelector('.p-ativo').checked : true,
         tipo_seletor: card.querySelector('.p-tipo').value,
         valor_seletor: card.querySelector('.p-valor').value,
         delay_ms: parseInt(card.querySelector('.p-delay').value, 10) || 0

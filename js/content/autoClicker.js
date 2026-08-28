@@ -159,6 +159,15 @@ async function executarRotinaAvancada(rotina) {
       const passo = rotina.passos_avancados[index];
       if (abortar) break;
 
+      // pulando passos desativados pela interface
+      if (passo.ativo === false) {
+        if (window.taticoUI) window.taticoUI.atualizarProgresso(index + 1, rotina.passos_avancados.length, 'done');
+        continue;
+      }
+
+      window._taticoDebugState.passoAtual = index + 1;
+      window._taticoDebugState.nomePasso = passo.acao === 'click' ? `Click: ${passo.valor_seletor}` : `Wait: ${passo.valor_seletor}`;
+
       await resolverPausaAc();
       if (window.taticoUI) window.taticoUI.atualizarProgresso(index + 1, rotina.passos_avancados.length, 'loading');
 
@@ -182,8 +191,7 @@ async function executarRotinaAvancada(rotina) {
 
           const alvo = encontrarElemento(passo.tipo_seletor, passo.valor_seletor);
           if (!alvo) {
-            if (cliquesFeitos > 0) { alvoEncontrado = true; break; }
-            await new Promise(res => setTimeout(res, 1000));
+            await new Promise(res => setTimeout(res, passo.click_intervalo_ms || 1000));
             continue;
           }
 
@@ -267,8 +275,18 @@ async function iniciarFilaRotinasSimples(rotina) {
   }, cfg.intermitencia_ms);
 }
 
+// garanto que os testes e amarracoes so ocorram quando a tela ja tiver totalmente em 'complete' status
 window.addEventListener('load', () => {
-  // descobrindo qual janela eu pertenço antes de mapear os processos
+  if (document.readyState !== 'complete') {
+    document.onreadystatechange = () => {
+      if (document.readyState === 'complete') inicializarExtensao();
+    };
+  } else {
+    inicializarExtensao();
+  }
+});
+
+function inicializarExtensao() {
   chrome.runtime.sendMessage({ action: "getTabContext" }, (context) => {
     if (!context || !context.windowId) return;
     currentWindowId = context.windowId;
@@ -368,4 +386,4 @@ window.addEventListener('load', () => {
       }
     });
   });
-});
+}
