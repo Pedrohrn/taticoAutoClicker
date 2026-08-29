@@ -60,10 +60,16 @@ function validarMatchUrl(urlAba, urlCadastrada) {
 
   const normalize = (u) => {
     try {
-      const obj = new URL(u.includes('http') ? u : 'https://' + u);
-      return obj.hostname.replace(/^www\./, '') + obj.pathname.replace(/\/$/, '');
+      const possuiProtocolo = u.startsWith('http://') || u.startsWith('https://');
+      const obj = new URL(possuiProtocolo ? u : 'https://' + u);
+
+      const hostname = obj.hostname.replace(/^www\./, '');
+      const pathname = obj.pathname.replace(/\/$/, '');
+      const search = obj.search;
+
+      return hostname + pathname + search;
     } catch (e) {
-      return u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').split('?')[0];
+      return u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
     }
   };
   return normalize(urlAba) === normalize(urlCadastrada);
