@@ -274,7 +274,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  // Abre a página dedicada, fixa ela no navegador, e passa o foco temporariamente para extrair o popup nativo
   if (msg.action === 'open_dedicated_recorder') {
     isRecordingGlobal = true;
     globalRecordingConfig = msg.config;
@@ -287,7 +286,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  // Roteia os comandos de controle para a página dedicada
   if (['stop_recording', 'pause_recording', 'resume_recording', 'toggle_mic', 'start_recording_now'].includes(msg.action)) {
     if (msg.action === 'stop_recording') isRecordingGlobal = false;
 
@@ -302,7 +300,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  // Quando as permissões são aceitas, devolve o foco para a aba do usuário imediatamente e inicia o overlay UI 3-2-1
   if (msg.action === 'recording_ready') {
     if (recordingTabId) {
       chrome.tabs.update(recordingTabId, { active: true }, () => {
