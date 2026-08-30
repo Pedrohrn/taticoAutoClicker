@@ -229,3 +229,110 @@ function retomarLoopsAdormecidos() {
     }
   });
 }
+
+let creatingOffscreen = null;
+let recordingTabId = null;
+
+async function setupOffscreenDocument() {
+  const offscreenUrl = chrome.runtime.getURL('js/offscreen/recorder-core.html');
+  const existingContexts = await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] });
+  if (existingContexts.length > 0) return;
+
+  if (creatingOffscreen) await creatingOffscreen;
+  else {
+    creatingOffscreen = chrome.offscreen.createDocument({
+      url: offscreenUrl,
+      reasons: ['USER_MEDIA'],
+      justification: 'Gravação de tela requisitada pelo usuário'
+    });
+    await creatingOffscreen;
+    creatingOffscreen = null;
+  }
+}
+
+let isRecordingGlobal = false;
+let globalRecordingConfig = null;
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'prepare_recording') {
+    (async () => {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      recordingTabId = activeTab?.id;
+
+      if (recordingTabId && activeTab.url && !activeTab.url.startsWith('chrome://') && !activeTab.url.startsWith('edge://') && !activeTab.url.startsWith('about:')) {
+        try {
+          await chrome.scripting.executeScript({ target: { tabId: recordingTabId }, files: ['js/content/recorderToolbar.js'] });
+          await chrome.scripting.executeScript({ target: { tabId: recordingTabId }, files: ['js/content/recorderOverlay.js'] });
+          chrome.tabs.sendMessage(recordingTabId, { action: 'init_overlay', config: msg.config });
+        } catch (err) {
+          console.warn("Não foi possível injetar a UI na aba atual:", err);
+        }
+      }
+      sendResponse({ status: 'prepared' });
+    })();
+    return true;
+  }
+
+  if (msg.action === 'request_desktop_capture') {
+    // CORREÇÃO CRÍTICA: Não passar sender.tab garante que o streamId
+    // fique vinculado ao processo da extensão, permitindo que o Offscreen Document o utilize.
+    chrome.desktopCapture.chooseDesktopMedia(['screen', 'window', 'tab', 'audio'], (streamId) => {
+      if (!streamId) {
+        sendResponse({ status: 'cancelled' });
+        return;
+      }
+      sendResponse({ status: 'ready', streamId });
+    });
+    return true;
+  }
+
+  if (msg.action === 'start_offscreen_capture') {
+    (async () => {
+      isRecordingGlobal = true;
+      globalRecordingConfig = msg.config;
+      await setupOffscreenDocument();
+      chrome.runtime.sendMessage({
+        target: 'offscreen',
+        action: 'start_capture',
+        streamId: msg.streamId,
+        config: msg.config
+      });
+      sendResponse({ status: 'started' });
+    })();
+    return true;
+  }
+
+  if (msg.action === 'stop_recording' || msg.action === 'pause_recording' || msg.action === 'resume_recording') {
+    if (msg.action === 'stop_recording') isRecordingGlobal = false;
+
+    chrome.runtime.sendMessage({ target: 'offscreen', ...msg });
+
+    if (msg.action === 'stop_recording' && recordingTabId) {
+      chrome.tabs.sendMessage(recordingTabId, { action: 'remove_overlays' });
+      chrome.tabs.create({ url: chrome.runtime.getURL('js/content/recorder/editor.html') });
+    }
+    sendResponse({ status: 'forwarded' });
+    return true;
+  }
+});
+
+// Rastreadores de injeção global para acompanhar a navegação do usuário
+function injetarUiGravacaoGlobal(tabId, tabUrl) {
+  if (!isRecordingGlobal || !tabUrl || tabUrl.startsWith('chrome://') || tabUrl.startsWith('edge://') || tabUrl.startsWith('about:')) return;
+
+  chrome.scripting.executeScript({ target: { tabId }, files: ['js/content/recorderToolbar.js', 'js/content/recorderOverlay.js'] })
+    .then(() => {
+      chrome.tabs.sendMessage(tabId, { action: 'init_overlay', config: globalRecordingConfig, state: 'recording' });
+    }).catch(err => console.warn("Injeção de gravação ignorada na aba alvo.", err));
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') injetarUiGravacaoGlobal(tabId, tab.url);
+});
+
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    injetarUiGravacaoGlobal(tab.id, tab.url);
+  } catch (e) { }
+});

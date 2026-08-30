@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Tatico Recorder - Resultado</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #1e1e1e;
+      color: #fff;
+      text-align: center;
+      padding: 20px;
+    }
+
+    video {
+      max-width: 800px;
+      width: 100%;
+      border: 2px solid #333;
+      border-radius: 8px;
+      margin: 20px 0;
+      background: #000;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      background: #28a745;
+      border: none;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+    }
+
+    .tools {
+      background: #2c2c2c;
+      padding: 15px;
+      border-radius: 8px;
+      display: inline-block;
+      text-align: left;
+      margin-top: 10px;
+    }
+
+    input {
+      padding: 5px;
+      border-radius: 4px;
+      border: 1px solid #555;
+      background: #222;
+      color: white;
+      width: 80px;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Gravação Concluída</h2>
+  <div id="loading">Recuperando arquivo do banco local...</div>
+
+  <video id="vidFinal" controls style="display:none;"></video>
+
+  <div>
+    <button id="btnDownload" class="btn" style="display:none;">⬇ Baixar Vídeo Original</button>
+  </div>
+
+  <div class="tools" id="divTrimming" style="display:none;">
+    <h4>Cortar Vídeo (MVP Nativo)</h4>
+    <p style="font-size: 0.85em; color: #ccc;">O corte nativo processará o vídeo em tempo real (1x velocidade). Sem uso
+      de servidores.</p>
+    <label>Início (seg): <input type="number" id="trimStart" value="0" min="0"></label>
+    <label>Fim (seg): <input type="number" id="trimEnd" value="0" min="0"></label>
+    <br><br>
+    <button id="btnTrim" class="btn btn-secondary">✂ Processar Corte (Re-render)</button>
+    <div id="trimStatus" style="margin-top: 10px; font-size: 0.9em; color:#17a2b8;"></div>
+  </div>
+
+  <script src="editor.js"></script>
+</body>
+
+</html>
