@@ -238,19 +238,14 @@ if (!window.taticoToolbarInjected) {
     function showCountdownAndRecord() {
       const overlay = document.createElement('div');
       overlay.style.cssText = `
-        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: rgba(0, 0, 0, 0.7); z-index: 2147483647;
-        display: flex; justify-content: center; align-items: center;
-        font-size: 180px; color: white; font-weight: bold; font-family: sans-serif;
-      `;
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.7); z-index: 2147483647;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 180px; color: white; font-weight: bold; font-family: sans-serif;
+  `;
       document.body.appendChild(overlay);
 
       isRecording = true;
-      chrome.runtime.sendMessage({
-        action: 'start_offscreen_capture',
-        streamId: streamIdForCapture,
-        config: sessionConfig
-      });
 
       let count = 3;
       overlay.textContent = count;
@@ -261,22 +256,15 @@ if (!window.taticoToolbarInjected) {
         } else {
           clearInterval(interval);
           overlay.remove();
+          chrome.runtime.sendMessage({ action: 'start_recording_now' });
         }
       }, 1000);
     }
 
     btnPlay.addEventListener('click', () => {
-      chrome.runtime.sendMessage({ action: 'request_desktop_capture' }, (response) => {
-        if (response && response.status === 'ready') {
-          streamIdForCapture = response.streamId;
-          btnPlay.style.display = 'none';
-          btnSettings.style.display = 'none';
-          configGroup.style.display = 'none';
-          btnPause.style.display = 'block';
-          btnStop.style.display = 'block';
-          showCountdownAndRecord();
-        }
-      });
+      btnPlay.textContent = '⏳ ...';
+      btnPlay.style.pointerEvents = 'none';
+      chrome.runtime.sendMessage({ action: 'open_dedicated_recorder', config: sessionConfig });
     });
 
     btnPause.addEventListener('click', () => {
@@ -288,8 +276,10 @@ if (!window.taticoToolbarInjected) {
     btnStop.addEventListener('click', () => {
       document.dispatchEvent(new Event('tatico:remove_overlays'));
       chrome.runtime.sendMessage({ action: 'stop_recording' });
-      toolbar.remove();
-      window.taticoToolbarInjected = false;
+      if (document.getElementById('tatico-recorder-toolbar')) {
+        toolbar.remove();
+        window.taticoToolbarInjected = false;
+      }
     });
 
     chrome.runtime.onMessage.addListener((msg) => {
@@ -308,10 +298,27 @@ if (!window.taticoToolbarInjected) {
           btnStop.style.display = 'block';
         }
       }
+
+      if (msg.action === 'recording_ready_ui') {
+        btnPlay.style.display = 'none';
+        btnSettings.style.display = 'none';
+        configGroup.style.display = 'none';
+        btnPause.style.display = 'block';
+        btnStop.style.display = 'block';
+        showCountdownAndRecord();
+      }
+
+      if (msg.action === 'recording_cancelled_ui') {
+        btnPlay.textContent = '▶ Gravar';
+        btnPlay.style.pointerEvents = 'auto';
+      }
+
       if (msg.action === 'remove_overlays') {
         document.dispatchEvent(new Event('tatico:remove_overlays'));
-        toolbar.remove();
-        window.taticoToolbarInjected = false;
+        if (document.getElementById('tatico-recorder-toolbar')) {
+          toolbar.remove();
+          window.taticoToolbarInjected = false;
+        }
       }
     });
   }

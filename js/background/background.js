@@ -231,7 +231,6 @@ function retomarLoopsAdormecidos() {
 }
 
 let creatingOffscreen = null;
-let recordingTabId = null;
 
 async function setupOffscreenDocument() {
   const offscreenUrl = chrome.runtime.getURL('js/offscreen/recorder-core.html');
@@ -252,6 +251,8 @@ async function setupOffscreenDocument() {
 
 let isRecordingGlobal = false;
 let globalRecordingConfig = null;
+let recordingTabId = null;
+let dedicatedRecorderTabId = null;
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'prepare_recording') {
@@ -273,50 +274,61 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  if (msg.action === 'request_desktop_capture') {
-    // CORREÇÃO CRÍTICA: Não passar sender.tab garante que o streamId
-    // fique vinculado ao processo da extensão, permitindo que o Offscreen Document o utilize.
-    chrome.desktopCapture.chooseDesktopMedia(['screen', 'window', 'tab', 'audio'], (streamId) => {
-      if (!streamId) {
-        sendResponse({ status: 'cancelled' });
-        return;
-      }
-      sendResponse({ status: 'ready', streamId });
+  // Abre a página dedicada, fixa ela no navegador, e passa o foco temporariamente para extrair o popup nativo
+  if (msg.action === 'open_dedicated_recorder') {
+    isRecordingGlobal = true;
+    globalRecordingConfig = msg.config;
+    chrome.storage.session.set({ recordingConfig: msg.config }, () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('js/offscreen/recorder-core.html'), pinned: true, active: true }, (tab) => {
+        dedicatedRecorderTabId = tab.id;
+        sendResponse({ status: 'opening' });
+      });
     });
     return true;
   }
 
-  if (msg.action === 'start_offscreen_capture') {
-    (async () => {
-      isRecordingGlobal = true;
-      globalRecordingConfig = msg.config;
-      await setupOffscreenDocument();
-      chrome.runtime.sendMessage({
-        target: 'offscreen',
-        action: 'start_capture',
-        streamId: msg.streamId,
-        config: msg.config
-      });
-      sendResponse({ status: 'started' });
-    })();
-    return true;
-  }
-
-  if (msg.action === 'stop_recording' || msg.action === 'pause_recording' || msg.action === 'resume_recording') {
+  // Roteia os comandos de controle para a página dedicada
+  if (['stop_recording', 'pause_recording', 'resume_recording', 'toggle_mic', 'start_recording_now'].includes(msg.action)) {
     if (msg.action === 'stop_recording') isRecordingGlobal = false;
 
-    chrome.runtime.sendMessage({ target: 'offscreen', ...msg });
+    if (dedicatedRecorderTabId) {
+      chrome.tabs.sendMessage(dedicatedRecorderTabId, msg).catch(() => { });
+    }
 
     if (msg.action === 'stop_recording' && recordingTabId) {
-      chrome.tabs.sendMessage(recordingTabId, { action: 'remove_overlays' });
-      chrome.tabs.create({ url: chrome.runtime.getURL('js/content/recorder/editor.html') });
+      chrome.tabs.sendMessage(recordingTabId, { action: 'remove_overlays' }).catch(() => { });
     }
     sendResponse({ status: 'forwarded' });
     return true;
   }
+
+  // Quando as permissões são aceitas, devolve o foco para a aba do usuário imediatamente e inicia o overlay UI 3-2-1
+  if (msg.action === 'recording_ready') {
+    if (recordingTabId) {
+      chrome.tabs.update(recordingTabId, { active: true }, () => {
+        chrome.tabs.sendMessage(recordingTabId, { action: 'recording_ready_ui' }).catch(() => { });
+      });
+    }
+  }
+
+  if (msg.action === 'recording_cancelled') {
+    isRecordingGlobal = false;
+    if (recordingTabId) {
+      chrome.tabs.update(recordingTabId, { active: true }, () => {
+        chrome.tabs.sendMessage(recordingTabId, { action: 'recording_cancelled_ui' }).catch(() => { });
+      });
+    }
+  }
+
+  if (msg.action === 'finalize_recording') {
+    isRecordingGlobal = false;
+    if (recordingTabId) {
+      chrome.tabs.sendMessage(recordingTabId, { action: 'remove_overlays' }).catch(() => { });
+    }
+    chrome.tabs.create({ url: chrome.runtime.getURL('js/content/recorder/editor.html') });
+  }
 });
 
-// Rastreadores de injeção global para acompanhar a navegação do usuário
 function injetarUiGravacaoGlobal(tabId, tabUrl) {
   if (!isRecordingGlobal || !tabUrl || tabUrl.startsWith('chrome://') || tabUrl.startsWith('edge://') || tabUrl.startsWith('about:')) return;
 
