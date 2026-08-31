@@ -1,13 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Tatico Tools",
-  "version": "4.0",
-  "description": "AutoClicker modular, Auto Tab Revolver, AutoScroll e AutoRefresh Tatico",
+  "version": "5.0",
+  "description": "AutoClicker modular, Auto Tab Revolver, AutoScroll, AutoRefresh & Screen Recorder",
   "permissions": [
     "activeTab",
     "scripting",
     "storage",
-    "tabs"
+    "tabs",
+    "desktopCapture",
+    "offscreen",
+    "tabCapture"
   ],
   "background": {
     "service_worker": "js/background/background.js"

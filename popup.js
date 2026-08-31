@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnResetStatusBar = document.getElementById('btnResetStatusBar');
   const btnOpcoes = document.getElementById('btnOpcoes');
   const comboJanelaScope = document.getElementById('comboJanelaScope');
-
   const textoStatusRevolver = document.getElementById('textoStatusRevolver');
   const textoRotinaAtual = document.getElementById('textoRotinaAtual');
 
@@ -18,7 +17,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.documentElement.setAttribute('data-theme', tema);
   }
 
-  // listando todas as janelas ativas e populando o combobox de escopo
   async function carregarJanelas() {
     allWindows = await chrome.windows.getAll({ populate: true });
     const currentWindow = await chrome.windows.getCurrent();
@@ -34,7 +32,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       option.textContent = label;
       comboJanelaScope.appendChild(option);
     });
-
     comboJanelaScope.value = currentWindowId.toString();
   }
 
@@ -45,11 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function lerEstadoDoEscopoSelecionado(windowStates) {
     const ids = getScopeIds();
-    // se for global, considero ativo se alguma janela estiver ativa. se for especifica, leio a especifica
-    let clickerPaused = true;
-    let refreshPaused = true;
-    let scrollPaused = true;
-    let revolverAtivo = false;
+    let clickerPaused = true, refreshPaused = true, scrollPaused = true, revolverAtivo = false;
 
     ids.forEach(id => {
       const wState = windowStates[id] || {};
@@ -72,72 +65,45 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!wStates[id]) wStates[id] = { autoClickerPaused: false, autoRefreshPaused: false, autoScrollPaused: false, revolverAtivo: false };
       wStates[id][chave] = booleanoAtivo;
     });
-
     await chrome.storage.local.set({ windowStates: wStates });
   }
 
   function atualizarUiBotoes(clickerPaused, refreshPaused, scrollPaused) {
-    if (clickerPaused) {
-      btnToggleAutoClicker.textContent = "Retomar AutoClicker";
-      btnToggleAutoClicker.className = "btn btn-success btn-block";
-    } else {
-      btnToggleAutoClicker.textContent = "Pausar AutoClicker";
-      btnToggleAutoClicker.className = "btn btn-secondary btn-block";
-    }
+    btnToggleAutoClicker.textContent = clickerPaused ? "Retomar AutoClicker" : "Pausar AutoClicker";
+    btnToggleAutoClicker.className = clickerPaused ? "btn btn-success btn-block" : "btn btn-secondary btn-block";
 
-    if (refreshPaused) {
-      btnToggleAutoRefresh.textContent = "Retomar AutoRefresh";
-      btnToggleAutoRefresh.className = "btn btn-success btn-block";
-    } else {
-      btnToggleAutoRefresh.textContent = "Pausar AutoRefresh";
-      btnToggleAutoRefresh.className = "btn btn-secondary btn-block";
-    }
+    btnToggleAutoRefresh.textContent = refreshPaused ? "Retomar AutoRefresh" : "Pausar AutoRefresh";
+    btnToggleAutoRefresh.className = refreshPaused ? "btn btn-success btn-block" : "btn btn-secondary btn-block";
 
-    if (scrollPaused) {
-      btnToggleAutoScroll.textContent = "Retomar AutoScroll";
-      btnToggleAutoScroll.className = "btn btn-success btn-block";
-    } else {
-      btnToggleAutoScroll.textContent = "Pausar AutoScroll";
-      btnToggleAutoScroll.className = "btn btn-secondary btn-block";
-    }
+    btnToggleAutoScroll.textContent = scrollPaused ? "Retomar AutoScroll" : "Pausar AutoScroll";
+    btnToggleAutoScroll.className = scrollPaused ? "btn btn-success btn-block" : "btn btn-secondary btn-block";
   }
 
   function atualizarUiRevolver(ativo) {
-    if (ativo) {
-      textoStatusRevolver.textContent = "Rodando (ON)";
-      textoStatusRevolver.style.color = "var(--success)";
-      btnToggleRevolver.textContent = "Pausar Revolver";
-      btnToggleRevolver.className = "btn btn-danger btn-block";
-    } else {
-      textoStatusRevolver.textContent = "Pausado (OFF)";
-      textoStatusRevolver.style.color = "var(--text-main)";
-      btnToggleRevolver.textContent = "Iniciar Revolver";
-      btnToggleRevolver.className = "btn btn-success btn-block";
-    }
+    textoStatusRevolver.textContent = ativo ? "Rodando (ON)" : "Pausado (OFF)";
+    textoStatusRevolver.style.color = ativo ? "var(--success)" : "var(--text-main)";
+    btnToggleRevolver.textContent = ativo ? "Pausar Revolver" : "Iniciar Revolver";
+    btnToggleRevolver.className = ativo ? "btn btn-danger btn-block" : "btn btn-success btn-block";
   }
 
   await carregarJanelas();
 
-  chrome.storage.local.get(['theme', 'statusBarClosed', 'rotinaAtualNome', 'windowStates'], (res) => {
-    const temaPadrao = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    aplicarTema(res.theme || temaPadrao);
+  chrome.storage.local.get(['theme', 'statusBarClosed', 'rotinaAtualNome', 'windowStates'], async (res) => {
+    aplicarTema(res.theme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
     textoRotinaAtual.textContent = res.rotinaAtualNome || "Nenhuma";
-
     if (res.statusBarClosed) {
       btnToggleStatusBar.textContent = "Exibir Barra de Status UI";
       btnToggleStatusBar.className = "btn btn-info btn-block";
     }
-
     lerEstadoDoEscopoSelecionado(res.windowStates || {});
   });
 
   comboJanelaScope.addEventListener('change', () => {
-    chrome.storage.local.get(['windowStates'], (res) => lerEstadoDoEscopoSelecionado(res.windowStates || {}));
+    chrome.storage.local.get(['windowStates'], res => lerEstadoDoEscopoSelecionado(res.windowStates || {}));
   });
 
   document.getElementById('btnToggleTheme').addEventListener('click', () => {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
-      (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
     chrome.storage.local.set({ theme: isDark ? 'light' : 'dark' });
   });
 
@@ -145,13 +111,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (namespace === 'local') {
       if (changes.theme) aplicarTema(changes.theme.newValue);
       if (changes.statusBarClosed) {
-        if (changes.statusBarClosed.newValue) {
-          btnToggleStatusBar.textContent = "Exibir Barra de Status UI";
-          btnToggleStatusBar.className = "btn btn-info btn-block";
-        } else {
-          btnToggleStatusBar.textContent = "Ocultar Barra de Status UI";
-          btnToggleStatusBar.className = "btn btn-secondary btn-block";
-        }
+        btnToggleStatusBar.textContent = changes.statusBarClosed.newValue ? "Exibir Barra de Status UI" : "Ocultar Barra de Status UI";
+        btnToggleStatusBar.className = changes.statusBarClosed.newValue ? "btn btn-info btn-block" : "btn btn-secondary btn-block";
       }
       if (changes.rotinaAtualNome) textoRotinaAtual.textContent = changes.rotinaAtualNome.newValue || "Nenhuma";
       if (changes.windowStates) lerEstadoDoEscopoSelecionado(changes.windowStates.newValue || {});
@@ -162,51 +123,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     const res = await chrome.storage.local.get(['windowStates', 'playlistIdAtiva']);
     const wStates = res.windowStates || {};
     const ids = getScopeIds();
-
-    const currentState = wStates[ids[0]]?.revolverAtivo || false;
-    const newState = !currentState;
-
+    const newState = !(wStates[ids[0]]?.revolverAtivo || false);
     ids.forEach(id => {
       if (!wStates[id]) wStates[id] = { autoClickerPaused: false, autoRefreshPaused: false, autoScrollPaused: false };
       wStates[id].revolverAtivo = newState;
       if (newState && res.playlistIdAtiva) wStates[id].playlistIdAtiva = res.playlistIdAtiva;
     });
-
     await chrome.storage.local.set({ windowStates: wStates });
   });
 
   btnToggleAutoClicker.addEventListener('click', async () => {
     const res = await chrome.storage.local.get(['windowStates']);
-    const currentState = res.windowStates?.[getScopeIds()[0]]?.autoClickerPaused || false;
-    await atualizarEstadoNoStorage('autoClickerPaused', !currentState);
+    await atualizarEstadoNoStorage('autoClickerPaused', !(res.windowStates?.[getScopeIds()[0]]?.autoClickerPaused || false));
   });
 
   btnToggleAutoRefresh.addEventListener('click', async () => {
     const res = await chrome.storage.local.get(['windowStates']);
-    const currentState = res.windowStates?.[getScopeIds()[0]]?.autoRefreshPaused || false;
-    await atualizarEstadoNoStorage('autoRefreshPaused', !currentState);
+    await atualizarEstadoNoStorage('autoRefreshPaused', !(res.windowStates?.[getScopeIds()[0]]?.autoRefreshPaused || false));
   });
 
   btnToggleAutoScroll.addEventListener('click', async () => {
     const res = await chrome.storage.local.get(['windowStates']);
-    const currentState = res.windowStates?.[getScopeIds()[0]]?.autoScrollPaused || false;
-    await atualizarEstadoNoStorage('autoScrollPaused', !currentState);
+    await atualizarEstadoNoStorage('autoScrollPaused', !(res.windowStates?.[getScopeIds()[0]]?.autoScrollPaused || false));
   });
 
   btnToggleStatusBar.addEventListener('click', () => {
-    chrome.storage.local.get(['statusBarClosed'], (res) => {
-      chrome.storage.local.set({ statusBarClosed: !res.statusBarClosed });
-    });
+    chrome.storage.local.get(['statusBarClosed'], res => chrome.storage.local.set({ statusBarClosed: !res.statusBarClosed }));
   });
 
   btnResetStatusBar.addEventListener('click', () => {
-    chrome.storage.local.set({
-      statusBarPos: 'bottom-center',
-      statusBarCustomX: null,
-      statusBarCustomY: null,
-      statusBarClosed: false
-    });
+    chrome.storage.local.set({ statusBarPos: 'bottom-center', statusBarCustomX: null, statusBarCustomY: null, statusBarClosed: false });
   });
 
   btnOpcoes.addEventListener('click', () => chrome.runtime.openOptionsPage());
+
+  const btnGravarTela = document.getElementById('btnGravarTela');
+  if (btnGravarTela) {
+    btnGravarTela.addEventListener('click', () => {
+      chrome.runtime.sendMessage({
+        action: 'prepare_recording',
+        config: { useMic: false, useWebcam: false, useHighlight: true, micId: null, camId: null }
+      }, () => window.close());
+    });
+  }
 });

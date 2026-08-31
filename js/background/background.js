@@ -229,3 +229,123 @@ function retomarLoopsAdormecidos() {
     }
   });
 }
+
+let creatingOffscreen = null;
+
+async function setupOffscreenDocument() {
+  const offscreenUrl = chrome.runtime.getURL('js/offscreen/recorder-core.html');
+  const existingContexts = await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] });
+  if (existingContexts.length > 0) return;
+
+  if (creatingOffscreen) await creatingOffscreen;
+  else {
+    creatingOffscreen = chrome.offscreen.createDocument({
+      url: offscreenUrl,
+      reasons: ['USER_MEDIA'],
+      justification: 'Gravação de tela requisitada pelo usuário'
+    });
+    await creatingOffscreen;
+    creatingOffscreen = null;
+  }
+}
+
+let isRecordingGlobal = false;
+let globalRecordingConfig = null;
+let recordingTabId = null;
+let dedicatedRecorderTabId = null;
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'prepare_recording') {
+    (async () => {
+      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      recordingTabId = activeTab?.id;
+
+      if (recordingTabId && activeTab.url && !activeTab.url.startsWith('chrome://') && !activeTab.url.startsWith('edge://') && !activeTab.url.startsWith('about:')) {
+        try {
+          await chrome.scripting.executeScript({ target: { tabId: recordingTabId }, files: ['js/content/recorderToolbar.js'] });
+          await chrome.scripting.executeScript({ target: { tabId: recordingTabId }, files: ['js/content/recorderOverlay.js'] });
+          chrome.tabs.sendMessage(recordingTabId, { action: 'init_overlay', config: msg.config });
+        } catch (err) {
+          console.warn("Não foi possível injetar a UI na aba atual:", err);
+        }
+      }
+      sendResponse({ status: 'prepared' });
+    })();
+    return true;
+  }
+
+  if (msg.action === 'open_dedicated_recorder') {
+    isRecordingGlobal = true;
+    globalRecordingConfig = msg.config;
+    chrome.storage.session.set({ recordingConfig: msg.config }, () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('js/offscreen/recorder-core.html'), pinned: true, active: true }, (tab) => {
+        dedicatedRecorderTabId = tab.id;
+        sendResponse({ status: 'opening' });
+      });
+    });
+    return true;
+  }
+
+  if (['stop_recording', 'pause_recording', 'resume_recording', 'toggle_mic', 'start_recording_now'].includes(msg.action)) {
+    if (msg.action === 'stop_recording') isRecordingGlobal = false;
+
+    if (dedicatedRecorderTabId) {
+      chrome.tabs.sendMessage(dedicatedRecorderTabId, msg).catch(() => { });
+    }
+
+    if (msg.action === 'stop_recording' && recordingTabId) {
+      chrome.tabs.sendMessage(recordingTabId, { action: 'remove_overlays' }).catch(() => { });
+    }
+    sendResponse({ status: 'forwarded' });
+    return true;
+  }
+
+  if (msg.action === 'recording_ready') {
+    if (recordingTabId) {
+      chrome.tabs.update(recordingTabId, { active: true }, () => {
+        chrome.tabs.sendMessage(recordingTabId, { action: 'recording_ready_ui' }).catch(() => { });
+      });
+    }
+  }
+
+  if (msg.action === 'recording_cancelled') {
+    isRecordingGlobal = false;
+    if (recordingTabId) {
+      chrome.tabs.update(recordingTabId, { active: true }, () => {
+        chrome.tabs.sendMessage(recordingTabId, { action: 'recording_cancelled_ui' }).catch(() => { });
+      });
+    }
+  }
+
+  if (msg.action === 'finalize_recording') {
+    isRecordingGlobal = false;
+    if (recordingTabId) {
+      chrome.tabs.sendMessage(recordingTabId, { action: 'remove_overlays' }).catch(() => { });
+    }
+    if (dedicatedRecorderTabId) {
+      chrome.tabs.update(dedicatedRecorderTabId, { url: chrome.runtime.getURL('js/content/recorder/editor.html'), active: true });
+    } else {
+      chrome.tabs.create({ url: chrome.runtime.getURL('js/content/recorder/editor.html') });
+    }
+  }
+});
+
+function injetarUiGravacaoGlobal(tabId, tabUrl) {
+  if (!isRecordingGlobal || !tabUrl || tabUrl.startsWith('chrome://') || tabUrl.startsWith('chrome-extension://') || tabUrl.startsWith('edge://') || tabUrl.startsWith('about:')) return;
+
+  chrome.scripting.executeScript({ target: { tabId }, files: ['js/content/recorderToolbar.js', 'js/content/recorderOverlay.js'] })
+    .then(() => {
+      chrome.tabs.sendMessage(tabId, { action: 'init_overlay', config: globalRecordingConfig, state: 'recording' });
+    }).catch(err => console.warn("Injeção de gravação ignorada na aba alvo.", err));
+}
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') injetarUiGravacaoGlobal(tabId, tab.url);
+});
+
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    injetarUiGravacaoGlobal(tab.id, tab.url);
+  } catch (e) { }
+});
