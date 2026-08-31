@@ -322,12 +322,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (recordingTabId) {
       chrome.tabs.sendMessage(recordingTabId, { action: 'remove_overlays' }).catch(() => { });
     }
-    chrome.tabs.create({ url: chrome.runtime.getURL('js/content/recorder/editor.html') });
+    if (dedicatedRecorderTabId) {
+      chrome.tabs.update(dedicatedRecorderTabId, { url: chrome.runtime.getURL('js/content/recorder/editor.html'), active: true });
+    } else {
+      chrome.tabs.create({ url: chrome.runtime.getURL('js/content/recorder/editor.html') });
+    }
   }
 });
 
 function injetarUiGravacaoGlobal(tabId, tabUrl) {
-  if (!isRecordingGlobal || !tabUrl || tabUrl.startsWith('chrome://') || tabUrl.startsWith('edge://') || tabUrl.startsWith('about:')) return;
+  if (!isRecordingGlobal || !tabUrl || tabUrl.startsWith('chrome://') || tabUrl.startsWith('chrome-extension://') || tabUrl.startsWith('edge://') || tabUrl.startsWith('about:')) return;
 
   chrome.scripting.executeScript({ target: { tabId }, files: ['js/content/recorderToolbar.js', 'js/content/recorderOverlay.js'] })
     .then(() => {

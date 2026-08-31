@@ -3,79 +3,67 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Tatico Recorder - Resultado</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #1e1e1e;
-      color: #fff;
-      text-align: center;
-      padding: 20px;
-    }
-
-    video {
-      max-width: 800px;
-      width: 100%;
-      border: 2px solid #333;
-      border-radius: 8px;
-      margin: 20px 0;
-      background: #000;
-    }
-
-    .btn {
-      padding: 10px 20px;
-      background: #28a745;
-      border: none;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
-      margin: 5px;
-    }
-
-    .btn-secondary {
-      background: #6c757d;
-    }
-
-    .tools {
-      background: #2c2c2c;
-      padding: 15px;
-      border-radius: 8px;
-      display: inline-block;
-      text-align: left;
-      margin-top: 10px;
-    }
-
-    input {
-      padding: 5px;
-      border-radius: 4px;
-      border: 1px solid #555;
-      background: #222;
-      color: white;
-      width: 80px;
-    }
-  </style>
+  <title>Tatico Recorder - Edição</title>
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/components.css">
 </head>
 
-<body>
-  <h2>Gravação Concluída</h2>
-  <div id="loading">Recuperando arquivo do banco local...</div>
-
-  <video id="vidFinal" controls style="display:none;"></video>
-
-  <div>
-    <button id="btnDownload" class="btn" style="display:none;">⬇ Baixar Vídeo Original</button>
+<body class="tatico-page editor-page" data-theme="dark">
+  <div class="editor-header">
+    <img src="/logo.png" alt="Tatico" class="editor-logo" style="max-width: 120px;">
+    <h2>Gravação Concluída</h2>
   </div>
 
-  <div class="tools" id="divTrimming" style="display:none;">
-    <h4>Cortar Vídeo (MVP Nativo)</h4>
-    <p style="font-size: 0.85em; color: #ccc;">O corte nativo processará o vídeo em tempo real (1x velocidade). Sem uso
-      de servidores.</p>
-    <label>Início (seg): <input type="number" id="trimStart" value="0" min="0"></label>
-    <label>Fim (seg): <input type="number" id="trimEnd" value="0" min="0"></label>
-    <br><br>
-    <button id="btnTrim" class="btn btn-secondary">✂ Processar Corte (Re-render)</button>
-    <div id="trimStatus" style="margin-top: 10px; font-size: 0.9em; color:#17a2b8;"></div>
+  <div id="loading" class="status-box">Recuperando arquivo do banco local...</div>
+
+  <div class="editor-container" id="editorContainer" style="display:none;">
+
+    <div class="tools-section">
+      <button id="btnDownload" class="btn btn-primary btn-block" style="margin-bottom: 15px;">⬇ Baixar Vídeo
+        Original</button>
+
+      <div class="tools-card" id="divTrimming">
+        <h4>✂ Edição</h4>
+
+        <label>Linha do Tempo (Deslize para navegar):</label>
+        <input type="range" id="timeline" min="0" value="0" step="0.1" class="timeline-slider">
+        <div class="time-display"><span id="currentTimeDisplay">0.0</span>s / <span id="durationDisplay">0.0</span>s
+        </div>
+
+        <fieldset>
+          <legend>Cortar Pontas</legend>
+          <div class="flex-row">
+            <label>Início (s): <input type="number" id="trimStart" value="0" min="0" step="0.1"></label>
+            <label>Fim (s): <input type="number" id="trimEnd" value="0" min="0" step="0.1"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Excluir Trecho Específico</legend>
+          <div class="flex-row">
+            <label>De (s): <input type="number" id="cutStart" value="0" min="0" step="0.1"></label>
+            <label>Até (s): <input type="number" id="cutEnd" value="0" min="0" step="0.1"></label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Mutar Áudio de Trecho</legend>
+          <div class="flex-row">
+            <label>De (s): <input type="number" id="muteStart" value="0" min="0" step="0.1"></label>
+            <label>Até (s): <input type="number" id="muteEnd" value="0" min="0" step="0.1"></label>
+          </div>
+        </fieldset>
+
+        <button id="btnTrim" class="btn btn-secondary btn-block" style="margin-top: 15px;">▶ Processar Novo
+          Vídeo</button>
+        <div id="trimStatus" class="status-box" style="display:none; margin-top: 10px; color: #17a2b8;"></div>
+      </div>
+    </div>
+
+    <div class="video-section">
+      <video id="vidFinal" controls></video>
+    </div>
+
   </div>
 
   <script src="editor.js"></script>
