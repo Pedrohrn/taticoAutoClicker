@@ -8,30 +8,59 @@ if (!window.taticoToolbarInjected) {
       position: fixed; bottom: 20px; left: 20px; background: #222; color: white;
       border-radius: 8px; z-index: 2147483647; display: flex; flex-direction: column;
       box-shadow: 0 4px 12px rgba(0,0,0,0.4); font-family: sans-serif; user-select: none;
-      border: 1px solid #444; transition: width 0.2s; min-width: 200px;
+      border: 1px solid #444; transition: all 0.2s; min-width: 200px;
     `;
 
     let isPaused = false;
     let isMinimized = false;
     let isRecording = false;
     let sessionConfig = { useMic: false, micId: null, useCam: false, camId: null, useHighlight: true };
-    let streamIdForCapture = null;
 
     const dragHandle = document.createElement('div');
     dragHandle.style.cssText = `
-      cursor: grab; background: #333; padding: 6px; border-radius: 8px 8px 0 0;
-      display: flex; justify-content: space-between; align-items: center;
+      cursor: grab; background: #333; padding: 8px; border-radius: 8px 8px 0 0;
+      display: flex; justify-content: space-between; align-items: center; gap: 10px;
     `;
+
     const dragIcon = document.createElement('span');
-    dragIcon.textContent = '✥ Arrastar';
-    dragIcon.style.fontSize = '12px';
+    dragIcon.innerHTML = '⠿';
     dragIcon.style.color = '#aaa';
+    dragIcon.style.fontSize = '14px';
+
+    const miniControls = document.createElement('div');
+    miniControls.style.cssText = 'display: none; gap: 12px; align-items: center; flex: 1; justify-content: center; font-size: 14px;';
+
+    const miniMic = document.createElement('button');
+    miniMic.innerHTML = '🔇';
+    miniMic.title = 'Microfone (Desligado)';
+    miniMic.style.cssText = 'background:none; border:none; cursor:pointer; font-size:16px; opacity:0.6; transition: 0.2s;';
+
+    const miniCam = document.createElement('button');
+    miniCam.innerHTML = '📷<sup style="color:#dc3545;font-weight:bold;">x</sup>';
+    miniCam.title = 'Câmera (Desligada)';
+    miniCam.style.cssText = 'background:none; border:none; cursor:pointer; font-size:16px; opacity:0.6; transition: 0.2s;';
+
+    const miniPause = document.createElement('button');
+    miniPause.innerHTML = '⏸';
+    miniPause.title = 'Pausar/Retomar';
+    miniPause.style.cssText = 'background:none; border:none; cursor:pointer; color: #ffc107;';
+
+    const miniStop = document.createElement('button');
+    miniStop.innerHTML = '⏹';
+    miniStop.title = 'Parar Gravação';
+    miniStop.style.cssText = 'background:none; border:none; cursor:pointer; color: #dc3545;';
+
+    miniControls.appendChild(miniMic);
+    miniControls.appendChild(miniCam);
+    miniControls.appendChild(miniPause);
+    miniControls.appendChild(miniStop);
 
     const btnMinMax = document.createElement('button');
     btnMinMax.textContent = '➖';
     btnMinMax.style.cssText = 'background:none; border:none; color:white; cursor:pointer; font-size: 10px;';
 
     dragHandle.appendChild(dragIcon);
+    dragHandle.appendChild(miniControls);
     dragHandle.appendChild(btnMinMax);
 
     const contentBody = document.createElement('div');
@@ -43,22 +72,22 @@ if (!window.taticoToolbarInjected) {
     const micRow = document.createElement('div');
     micRow.style.cssText = 'display: flex; align-items: center; gap: 5px;';
     const btnMic = document.createElement('button');
-    btnMic.textContent = '🎤 OFF';
+    btnMic.innerHTML = '🔇 OFF';
     btnMic.title = 'Ligar/Desligar Microfone';
-    btnMic.style.cssText = 'cursor:pointer; background:#555; color:white; border:none; border-radius:4px; padding:4px 8px; flex-shrink:0; width: 65px;';
+    btnMic.style.cssText = 'cursor:pointer; background:#555; color:white; border:none; border-radius:4px; padding:4px 8px; flex-shrink:0; width: 70px;';
     const selectMic = document.createElement('select');
-    selectMic.style.cssText = 'display:none; flex:1; background:#333; color:white; border:1px solid #555; border-radius:4px; padding:3px; max-width: 130px; font-size: 11px;';
+    selectMic.style.cssText = 'display:none; flex:1; background:#333; color:white; border:1px solid #555; border-radius:4px; padding:3px; max-width: 125px; font-size: 11px;';
     micRow.appendChild(btnMic);
     micRow.appendChild(selectMic);
 
     const camRow = document.createElement('div');
     camRow.style.cssText = 'display: flex; align-items: center; gap: 5px;';
     const btnCam = document.createElement('button');
-    btnCam.textContent = '📷 OFF';
+    btnCam.innerHTML = '📷 OFF';
     btnCam.title = 'Ligar/Desligar Câmera';
-    btnCam.style.cssText = 'cursor:pointer; background:#555; color:white; border:none; border-radius:4px; padding:4px 8px; flex-shrink:0; width: 65px;';
+    btnCam.style.cssText = 'cursor:pointer; background:#555; color:white; border:none; border-radius:4px; padding:4px 8px; flex-shrink:0; width: 70px;';
     const selectCam = document.createElement('select');
-    selectCam.style.cssText = 'display:none; flex:1; background:#333; color:white; border:1px solid #555; border-radius:4px; padding:3px; max-width: 130px; font-size: 11px;';
+    selectCam.style.cssText = 'display:none; flex:1; background:#333; color:white; border:1px solid #555; border-radius:4px; padding:3px; max-width: 125px; font-size: 11px;';
     camRow.appendChild(btnCam);
     camRow.appendChild(selectCam);
 
@@ -105,19 +134,30 @@ if (!window.taticoToolbarInjected) {
     toolbar.appendChild(contentBody);
     document.body.appendChild(toolbar);
 
+    miniMic.addEventListener('click', () => btnMic.click());
+    miniCam.addEventListener('click', () => btnCam.click());
+    miniPause.addEventListener('click', () => btnPause.click());
+    miniStop.addEventListener('click', () => btnStop.click());
+
     btnMic.addEventListener('click', async () => {
       if (sessionConfig.useMic) {
         sessionConfig.useMic = false;
-        btnMic.textContent = '🎤 OFF';
+        btnMic.innerHTML = '🔇 OFF';
         btnMic.style.background = '#555';
+        miniMic.innerHTML = '🔇';
+        miniMic.title = 'Microfone (Desligado)';
+        miniMic.style.opacity = '0.6';
         selectMic.style.display = 'none';
         if (isRecording) chrome.runtime.sendMessage({ target: 'offscreen', action: 'toggle_mic', state: false });
       } else {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           sessionConfig.useMic = true;
-          btnMic.textContent = '🎤 ON';
+          btnMic.innerHTML = '🎙️ ON';
           btnMic.style.background = '#28a745';
+          miniMic.innerHTML = '🎙️';
+          miniMic.title = 'Microfone (Ligado)';
+          miniMic.style.opacity = '1';
           selectMic.style.display = 'block';
 
           const devices = await navigator.mediaDevices.enumerateDevices();
@@ -135,8 +175,7 @@ if (!window.taticoToolbarInjected) {
 
           if (isRecording) chrome.runtime.sendMessage({ target: 'offscreen', action: 'toggle_mic', state: true });
         } catch (e) {
-          console.warn('Mic permission denied:', e);
-          alert('Permissão de microfone negada pelo navegador ou dispositivo indisponível.');
+          alert('Permissão de microfone negada ou dispositivo indisponível.');
         }
       }
     });
@@ -149,16 +188,22 @@ if (!window.taticoToolbarInjected) {
     btnCam.addEventListener('click', async () => {
       if (sessionConfig.useCam) {
         sessionConfig.useCam = false;
-        btnCam.textContent = '📷 OFF';
+        btnCam.innerHTML = '📷 OFF';
         btnCam.style.background = '#555';
+        miniCam.innerHTML = '📷<sup style="color:#dc3545;font-weight:bold;">x</sup>';
+        miniCam.title = 'Câmera (Desligada)';
+        miniCam.style.opacity = '0.6';
         selectCam.style.display = 'none';
         document.dispatchEvent(new CustomEvent('tatico:toggle_webcam', { detail: { action: 'stop' } }));
       } else {
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
           sessionConfig.useCam = true;
-          btnCam.textContent = '📷 ON';
+          btnCam.innerHTML = '📸 ON';
           btnCam.style.background = '#28a745';
+          miniCam.innerHTML = '📸';
+          miniCam.title = 'Câmera (Ligada)';
+          miniCam.style.opacity = '1';
           selectCam.style.display = 'block';
 
           const devices = await navigator.mediaDevices.enumerateDevices();
@@ -176,8 +221,7 @@ if (!window.taticoToolbarInjected) {
 
           document.dispatchEvent(new CustomEvent('tatico:toggle_webcam', { detail: { action: 'start', deviceId: sessionConfig.camId } }));
         } catch (e) {
-          console.warn('Cam permission denied:', e);
-          alert('Permissão de câmera negada pelo navegador ou dispositivo indisponível.');
+          alert('Permissão de câmera negada ou dispositivo indisponível.');
         }
       }
     });
@@ -206,15 +250,22 @@ if (!window.taticoToolbarInjected) {
       configGroup.style.display = configGroup.style.display === 'none' ? 'flex' : 'none';
     });
 
-    btnMinMax.addEventListener('click', () => {
-      isMinimized = !isMinimized;
+    function setMinimizedState(state) {
+      isMinimized = state;
       contentBody.style.display = isMinimized ? 'none' : 'flex';
+      miniControls.style.display = (isMinimized && isRecording) ? 'flex' : 'none';
       btnMinMax.textContent = isMinimized ? '➕' : '➖';
+      dragHandle.style.borderRadius = isMinimized ? '8px' : '8px 8px 0 0';
+      toolbar.style.minWidth = isMinimized ? 'auto' : '200px';
+    }
+
+    btnMinMax.addEventListener('click', () => {
+      setMinimizedState(!isMinimized);
     });
 
     let isDragging = false, startX, startY, initialX, initialY;
     dragHandle.addEventListener('mousedown', (e) => {
-      if (e.target === btnMinMax) return;
+      if (e.target.tagName === 'BUTTON' || e.target.parentElement.tagName === 'BUTTON') return;
       isDragging = true;
       startX = e.clientX; startY = e.clientY;
       initialX = toolbar.offsetLeft; initialY = toolbar.offsetTop;
@@ -238,11 +289,11 @@ if (!window.taticoToolbarInjected) {
     function showCountdownAndRecord() {
       const overlay = document.createElement('div');
       overlay.style.cssText = `
-    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(0, 0, 0, 0.7); z-index: 2147483647;
-    display: flex; justify-content: center; align-items: center;
-    font-size: 180px; color: white; font-weight: bold; font-family: sans-serif;
-  `;
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.7); z-index: 2147483647;
+        display: flex; justify-content: center; align-items: center;
+        font-size: 180px; color: white; font-weight: bold; font-family: sans-serif;
+      `;
       document.body.appendChild(overlay);
 
       isRecording = true;
@@ -257,6 +308,7 @@ if (!window.taticoToolbarInjected) {
           clearInterval(interval);
           overlay.remove();
           chrome.runtime.sendMessage({ action: 'start_recording_now' });
+          setMinimizedState(true);
         }
       }, 1000);
     }
@@ -270,6 +322,7 @@ if (!window.taticoToolbarInjected) {
     btnPause.addEventListener('click', () => {
       isPaused = !isPaused;
       btnPause.textContent = isPaused ? '▶ Retomar' : '⏸ Pausar';
+      miniPause.innerHTML = isPaused ? '▶' : '⏸';
       chrome.runtime.sendMessage({ action: isPaused ? 'pause_recording' : 'resume_recording' });
     });
 
@@ -296,6 +349,7 @@ if (!window.taticoToolbarInjected) {
           configGroup.style.display = 'none';
           btnPause.style.display = 'block';
           btnStop.style.display = 'block';
+          setMinimizedState(true);
         }
       }
 
