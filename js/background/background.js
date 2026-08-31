@@ -233,7 +233,7 @@ function retomarLoopsAdormecidos() {
 let creatingOffscreen = null;
 
 async function setupOffscreenDocument() {
-  const offscreenUrl = chrome.runtime.getURL('js/offscreen/recorder-core.html');
+  const offscreenUrl = chrome.runtime.getURL('pages/recorder/core.html');
   const existingContexts = await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] });
   if (existingContexts.length > 0) return;
 
@@ -278,7 +278,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     isRecordingGlobal = true;
     globalRecordingConfig = msg.config;
     chrome.storage.session.set({ recordingConfig: msg.config }, () => {
-      chrome.tabs.create({ url: chrome.runtime.getURL('js/offscreen/recorder-core.html'), pinned: true, active: true }, (tab) => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('pages/recorder/core.html'), pinned: true, active: true }, (tab) => {
         dedicatedRecorderTabId = tab.id;
         sendResponse({ status: 'opening' });
       });
@@ -323,9 +323,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       chrome.tabs.sendMessage(recordingTabId, { action: 'remove_overlays' }).catch(() => { });
     }
     if (dedicatedRecorderTabId) {
-      chrome.tabs.update(dedicatedRecorderTabId, { url: chrome.runtime.getURL('js/content/recorder/editor.html'), active: true });
+      chrome.tabs.update(dedicatedRecorderTabId, { url: chrome.runtime.getURL('pages/recorder/editor.html'), active: true });
     } else {
-      chrome.tabs.create({ url: chrome.runtime.getURL('js/content/recorder/editor.html') });
+      chrome.tabs.create({ url: chrome.runtime.getURL('pages/recorder/editor.html') });
     }
   }
 });
