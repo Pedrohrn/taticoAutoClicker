@@ -10,60 +10,80 @@
 
 <body class="tatico-page editor-page" data-theme="dark">
   <div class="editor-header">
-    <img src="/logo.png" alt="Tatico" class="editor-logo" style="max-width: 120px;">
+    <img src="/logo.png" alt="Tatico" class="editor-logo">
     <h2>Gravação Concluída</h2>
   </div>
 
-  <div id="loading" class="status-box">Recuperando arquivo do banco local...</div>
+  <div id="loading" class="status-box">Recuperando arquivo e corrigindo metadados...</div>
 
-  <div class="editor-container" id="editorContainer" style="display:none;">
-
-    <div class="tools-section">
-      <button id="btnDownload" class="btn btn-primary btn-block" style="margin-bottom: 15px;">⬇ Baixar Vídeo
-        Original</button>
-
-      <div class="tools-card" id="divTrimming">
-        <h4>✂ Edição</h4>
-
-        <label>Linha do Tempo (Deslize para navegar):</label>
-        <input type="range" id="timeline" min="0" value="0" step="0.1" class="timeline-slider">
-        <div class="time-display"><span id="currentTimeDisplay">0.0</span>s / <span id="durationDisplay">0.0</span>s
+  <div class="editor-container d-none" id="editorContainer">
+    <div class="video-section">
+      <div class="video-wrapper">
+        <video id="vidFinal" playsinline preload="metadata"></video>
+        <div class="custom-controls">
+          <button id="btnPlayPause" class="ctrl-btn" title="Reproduzir/Pausar">▶</button>
+          <div class="time-display-custom">
+            <span id="currentTimeDisplay">00:00</span> / <span id="durationDisplay">00:00</span>
+          </div>
+          <div class="timeline-container" id="timelineContainer">
+            <div class="timeline-track">
+              <div class="timeline-progress" id="timelineProgress"></div>
+              <div class="pin pin-trim" id="pinTrimStart" title="Início do Vídeo"></div>
+              <div class="pin pin-trim" id="pinTrimEnd" title="Fim do Vídeo"></div>
+            </div>
+          </div>
+          <button id="btnMuteToggle" class="ctrl-btn" title="Mutar/Desmutar Player">🔊</button>
+          <input type="range" id="volSlider" class="vol-slider" min="0" max="1" step="0.05" value="1">
+          <button id="btnFullscreen" class="ctrl-btn" title="Tela Cheia">⛶</button>
+          <button id="btnPip" class="ctrl-btn" title="Picture in Picture">◗</button>
         </div>
+      </div>
+    </div>
 
-        <fieldset>
-          <legend>Cortar Pontas</legend>
+    <div class="editor-sidebar">
+      <div class="accordion-item open">
+        <button type="button" class="accordion-header">
+          1) Delimitação
+          <span class="acc-icon">▼</span>
+        </button>
+        <div class="accordion-body">
           <div class="flex-row">
             <label>Início (s): <input type="number" id="trimStart" value="0" min="0" step="0.1"></label>
             <label>Fim (s): <input type="number" id="trimEnd" value="0" min="0" step="0.1"></label>
           </div>
-        </fieldset>
+        </div>
+      </div>
 
-        <fieldset>
-          <legend>Excluir Trecho Específico</legend>
-          <div class="flex-row">
-            <label>De (s): <input type="number" id="cutStart" value="0" min="0" step="0.1"></label>
-            <label>Até (s): <input type="number" id="cutEnd" value="0" min="0" step="0.1"></label>
-          </div>
-        </fieldset>
+      <div class="accordion-item">
+        <button type="button" class="accordion-header">
+          2) Cortar pedaços do vídeo
+          <span class="acc-icon">▼</span>
+        </button>
+        <div class="accordion-body">
+          <div id="cutItemsContainer" class="dynamic-items"></div>
+          <button type="button" id="btnAddCut" class="btn btn-sm btn-secondary mb-15">+ Adicionar Corte</button>
+        </div>
+      </div>
 
-        <fieldset>
-          <legend>Mutar Áudio de Trecho</legend>
-          <div class="flex-row">
-            <label>De (s): <input type="number" id="muteStart" value="0" min="0" step="0.1"></label>
-            <label>Até (s): <input type="number" id="muteEnd" value="0" min="0" step="0.1"></label>
-          </div>
-        </fieldset>
+      <div class="accordion-item">
+        <button type="button" class="accordion-header">
+          3) Mutar pedaços do vídeo
+          <span class="acc-icon">▼</span>
+        </button>
+        <div class="accordion-body">
+          <div id="muteItemsContainer" class="dynamic-items"></div>
+          <button type="button" id="btnAddMute" class="btn btn-sm btn-secondary mb-15">+ Adicionar Mute</button>
+        </div>
+      </div>
 
-        <button id="btnTrim" class="btn btn-secondary btn-block" style="margin-top: 15px;">▶ Processar Novo
-          Vídeo</button>
-        <div id="trimStatus" class="status-box" style="display:none; margin-top: 10px; color: #17a2b8;"></div>
+      <div id="trimStatus" class="status-box text-center mb-15 d-none"></div>
+
+      <div class="action-row">
+        <button id="btnTrim" class="btn btn-primary">▶ Processar Vídeo</button>
+        <button id="btnDownload" class="btn btn-info" title="Baixar Vídeo">⬇ Baixar Vídeo</button>
+        <button id="btnUndo" class="btn btn-secondary d-none" title="Desfazer">↶ Desfazer</button>
       </div>
     </div>
-
-    <div class="video-section">
-      <video id="vidFinal" controls></video>
-    </div>
-
   </div>
 
   <script src="/pages/recorder/editor.js"></script>
