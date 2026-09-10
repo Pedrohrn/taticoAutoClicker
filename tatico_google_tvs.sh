@@ -170,7 +170,6 @@ function instalar_tk() {
         esac
     done
 
-    # skippando a selecao de loja se for uma tv do tipo "outras"
     if [ "$tv_str" != "outras" ]; then
         _tk_sep
         while true; do
@@ -205,7 +204,6 @@ function instalar_tk() {
     _tk_timeout $?
 }
 
-# atualizando somente a logica de bashrc e do core respeitando a branch detectada
 function atualizar_comandos_tk() {
     _tk_sep
     echo "Baixando comandos mais recentes da branch: $TK_BRANCH..."
@@ -225,14 +223,12 @@ function atualizar_comandos_tk() {
     _tk_timeout $status
 }
 
-# chamando atualizacao dos arquivos da extensao no git
 function atualizar_tk() {
     _tk_sep
     bash "$HOME/.tatico/tatico_core.sh" --acao update
     _tk_timeout $?
 }
 
-# recebendo e validando flags especificas para alterar propriedades pontuais
 function configurar_tk() {
     local tv="" loja="" link=""
 
@@ -262,12 +258,18 @@ function configurar_tk() {
     _tk_timeout $?
 }
 
-# parando as rotinas do systemd sem fechar os processos do navegador
+function sincronizar_urls_tk() {
+    _tk_sep
+    echo "Lendo arquivo config.json local e aplicando novas URLs ao Chrome..."
+    bash "$HOME/.tatico/tatico_core.sh" --acao sync
+    _tk_timeout $?
+}
+alias sincronizar_urls="sincronizar_urls_tk"
+
 function pausar_tk() {
     _tk_sep
     systemctl --user stop tatico-chrome.service tatico-chrome-restart.timer
 
-    # removendo a trava do wmctrl que fixa o chrome acima de todas as outras janelas
     wmctrl -x -r Google-chrome -b remove,above 2>/dev/null || wmctrl -r 'Google Chrome' -b remove,above 2>/dev/null
 
     local status=$?
@@ -279,7 +281,6 @@ function pausar_tk() {
     _tk_timeout $status
 }
 
-# retomando o gerenciamento do systemd
 function resumir_tk() {
     _tk_sep
     systemctl --user start tatico-chrome.service tatico-chrome-restart.timer
@@ -290,11 +291,8 @@ function resumir_tk() {
     _tk_timeout $status
 }
 
-# limpando processos zumbis e reiniciando o servico master
 function reiniciar_tk() {
     _tk_sep
-
-    # efetuando o fechamento limpo via sigterm pro chrome ter a chance de gravar o historico de sessoes da aba em disco
     killall -15 google-chrome google-chrome-stable 2>/dev/null || true
     sleep 2
     killall -9 google-chrome google-chrome-stable 2>/dev/null || true
@@ -309,16 +307,13 @@ function reiniciar_tk() {
 }
 EOF
 
-# injetando a persistencia no bashrc do usuario local
 if ! grep -q "source $TK_RC" "$HOME/.bashrc"; then
     echo -e "\n# Tatico AutoClicker Kiosk\nsource $TK_RC" >> "$HOME/.bashrc"
 fi
 
-# isolando o script para nao rodar desnecessariamente
 cat << 'EOF' > "$TK_SCRIPT"
 #!/bin/bash
 
-# garantindo presenca de ferramentas base
 if ! command -v git &> /dev/null || ! command -v wmctrl &> /dev/null || ! command -v python3 &> /dev/null; then
     sudo apt-get update > /dev/null 2>&1
     sudo apt-get install -y git wmctrl python3 > /dev/null 2>&1
@@ -406,7 +401,38 @@ with open(c_path, 'w', encoding='utf-8') as f:
 "
 }
 
-# configurando ambiente de servicos assincronos e verificando o executavel do chrome
+function _tk_extrair_urls_principal() {
+    local urls_file="$HOME/.tatico/target_urls.txt"
+    python3 -c "
+import json, os
+c_path = os.path.join('$repo_dir', 'config.json')
+urls = []
+try:
+    with open(c_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    perfis = data.get('perfis', [])
+
+    # 1. Tenta buscar o perfil marcado como principal
+    principal = next((p for p in perfis if p.get('principal')), None)
+    if principal and principal.get('urls_alvo'):
+        urls = principal['urls_alvo']
+    else:
+        # 2. Fallback caso não exista principal: busca pelo nome da TV
+        tv = '$tv'
+        p_nome = 'TVs Padaria' if tv == 'padaria' else 'TVs Açougue'
+        tv_prof = next((p for p in perfis if p_nome.lower() in p.get('nome', '').lower()), None)
+        if tv_prof and tv_prof.get('urls_alvo'):
+            urls = tv_prof['urls_alvo']
+except Exception as e:
+    pass
+
+with open('$urls_file', 'w', encoding='utf-8') as f:
+    for u in urls:
+        if isinstance(u, str) and u.strip():
+            f.write(u.strip() + '\n')
+"
+}
+
 function _tk_configurar_ambiente() {
     local bin=""
     for p in "/usr/bin/google-chrome-stable" "/usr/bin/google-chrome" "/opt/google/chrome/google-chrome" "/snap/bin/google-chrome"; do
@@ -420,16 +446,11 @@ function _tk_configurar_ambiente() {
         bin=$(command -v google-chrome-stable || command -v google-chrome || echo "/usr/bin/google-chrome-stable")
     fi
 
-    local url=""
-    if [ "$tv" != "outras" ]; then
-        url=$(python3 -c "import json; print(next((p['urls_alvo'][0] for p in json.load(open('$repo_dir/config.json'))['perfis'] if ('Padaria' if '$tv' == 'padaria' else 'Açougue') in p['nome']), ''))" 2>/dev/null)
-    fi
-
+    # Flags essenciais. Removemos o session restore forcado na proxima etapa pra evitar bug de multiplas sessoes
     local chrome_flags="--start-fullscreen --disable-print-preview --kiosk-printing --disable-infobars --disable-session-crashed-bubble --no-first-run --disable-crash-reporter --no-errdialogs --disable-notifications --disable-default-apps --no-default-browser-check --password-store=basic --use-mock-keychain --simulate-outdated-no-au='Tue, 31 Dec 2099 23:59:59 GMT' --metrics-recording-only --disable-sync --disable-background-networking --disable-prompt-on-repost --disable-client-side-phishing-detection --disable-component-update --disable-features=Translate,TranslateUI,OptimizationHints,MediaRouter,DialMediaRouteProvider,CalculateNativeWinOcclusion,CertificateTransparencyComponentUpdater,AutofillServerCommunication,PrivacySandboxSettings4 --load-extension=$repo_dir"
 
     python3 -c "
 import json, os
-
 paths = [os.path.expanduser('~/.config/google-chrome/Default/Preferences'), os.path.expanduser('~/snap/google-chrome/current/.config/google-chrome/Default/Preferences')]
 for p in paths:
     try:
@@ -446,7 +467,8 @@ for p in paths:
         data['extensions'] = exts
 
         sess = data.get('session', {})
-        sess['restore_on_startup'] = 1
+        # 5 = Normal startup. Impede que o chrome restaure abas passadas e duplique janelas
+        sess['restore_on_startup'] = 5
         data['session'] = sess
 
         with open(p, 'w', encoding='utf-8') as f:
@@ -455,30 +477,32 @@ for p in paths:
         pass
 "
 
-    # configuracoes de desktop e systemd somente se o usuario solicitou
+    _tk_extrair_urls_principal
+
     if [ "$servicos" == "sim" ]; then
         local sd_dir="$HOME/.config/systemd/user"
         mkdir -p "$sd_dir"
 
-        # criando um wrapper pra interceptar a chamada de inicio e controlar a injecao da url alvo no comando do chrome
         cat << 'SH_EOF' > "$HOME/.tatico/start_chrome.sh"
 #!/bin/bash
-has_session=0
-for path in "$HOME/.config/google-chrome/Default/Sessions" "$HOME/snap/google-chrome/current/.config/google-chrome/Default/Sessions"; do
-    if [ -d "$path" ]; then
-        # busco por historico de abas com tamanho relevante indicando que ha dados a serem restaurados
-        if find "$path" -maxdepth 1 -name "Tabs_*" -type f -size +100c 2>/dev/null | grep -q .; then
-            has_session=1
-            break
-        fi
-    fi
-done
+# Evitando bugs de múltiplas sessões limpando qualquer processo solto ou zumbi
+killall -9 google-chrome google-chrome-stable 2>/dev/null || true
+sleep 1
 
-# se percebo que tem sessoes pra restaurar, inicio o navegador sem passar a url pra que ele mesmo abra e recupere as abas. senao, forco a url alvo
-if [ "$has_session" -eq 1 ] || [ -z "$TK_TARGET_URL" ]; then
+urls=()
+if [ -f "$HOME/.tatico/target_urls.txt" ]; then
+    while IFS= read -r line; do
+        if [ -n "$line" ]; then
+            urls+=("$line")
+        fi
+    done < "$HOME/.tatico/target_urls.txt"
+fi
+
+if [ ${#urls[@]} -eq 0 ]; then
     exec "$@"
 else
-    exec "$@" "$TK_TARGET_URL"
+    # Expande o array para que o bash passe cada url como argumento separado pro binario
+    exec "$@" "${urls[@]}"
 fi
 SH_EOF
         chmod +x "$HOME/.tatico/start_chrome.sh"
@@ -522,7 +546,6 @@ Type=simple
 KillMode=mixed
 Environment=TK_TV_TYPE=$tv
 Environment=DISPLAY=${DISPLAY:-:0}
-Environment="TK_TARGET_URL=$url"
 ExecStartPre=/bin/bash -c "killall -15 google-chrome google-chrome-stable 2>/dev/null || true; sleep 2; killall -9 google-chrome google-chrome-stable 2>/dev/null || true"
 ExecStartPre=/usr/bin/python3 %h/.tatico/clear_chrome_session.py
 ExecStartPre=/bin/bash -c "sleep 3"
@@ -566,7 +589,6 @@ SYS_EOF
 
 case "$acao" in
     install)
-        # efetuando fechamento brando para preservar sessoes de login antes da exclusao pesada
         killall -15 google-chrome google-chrome-stable 2>/dev/null || true
         sleep 10
         killall -9 google-chrome google-chrome-stable 2>/dev/null || true
@@ -600,24 +622,28 @@ case "$acao" in
         ;;
     config)
         _tk_processar_json
+        _tk_extrair_urls_principal
         if [ "$servicos" == "sim" ]; then
             systemctl --user restart tatico-chrome.service || exit 1
         fi
         echo "configurações aplicadas."
+        ;;
+    sync)
+        _tk_extrair_urls_principal
+        if [ "$servicos" == "sim" ]; then
+            systemctl --user restart tatico-chrome.service || exit 1
+        fi
+        echo "Sucesso: As URLs salvas no config.json foram sincronizadas com o Chrome."
         ;;
 esac
 EOF
 
 chmod +x "$TK_SCRIPT"
 
-# validando se estamos atualizando apenas os scripts ou rodando instalacao completa
 if [ "$1" == "--only-cmds" ]; then
-    # finaliza silenciosamente apos recriar os arquivos base
     exit 0
 fi
 
-# forcando o carregamento dos aliases nesta sessao de pipe
 source "$TK_RC"
 
-# iniciando interacao de configuracao final da tv
 instalar_tk
