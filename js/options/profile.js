@@ -14,17 +14,39 @@ export function initProfiles() {
     });
   }
 
-  // usando delegacao de eventos base na tabela inteira garantindo performance
+  function sugerirDownloadConfig() {
+    setTimeout(() => {
+      if (confirm('Atenção: Houve alterações nas URLs ou no Perfil Principal.\nDeseja baixar o novo arquivo "config.json" para atualizar o script de automação das TVs?')) {
+        chrome.storage.local.get(null, (res) => {
+          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(res, null, 2));
+          const a = document.createElement('a');
+          a.href = dataStr;
+          a.download = "config.json";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+
+          alert("Pronto! Mova/substitua o arquivo baixado na pasta taticoAutoClicker e execute o comando 'sincronizar_urls' no terminal da TV.");
+        });
+      }
+    }, 300);
+  }
+
+  // usando delegacao de eventos na tabela
   bodyLista.addEventListener('click', (e) => {
     const btnEditar = e.target.closest('.btn-editar-p');
     const btnExcluir = e.target.closest('.btn-excluir-p');
+    const btnPrincipal = e.target.closest('.btn-principal-p');
 
     if (btnEditar) {
       abrirEdicao(btnEditar.dataset.id);
+    } else if (btnPrincipal) {
+      const id = btnPrincipal.dataset.id;
+      perfisLocais.forEach(p => p.principal = (p.id === id));
+      salvarESincronizar(true);
     } else if (btnExcluir) {
       const id = btnExcluir.dataset.id;
 
-      // regra de validacao de exclusao: verificando dependencias ativas
       chrome.storage.local.get(['rotinas', 'playlists'], (res) => {
         const rotinas = res.rotinas || [];
         const playlists = res.playlists || [];
@@ -54,14 +76,19 @@ export function initProfiles() {
       const dias = p.dias_semana?.length > 0 ? p.dias_semana.map(d => nomesDias[d]).join(', ') : '-';
       const horario = p.horario?.inicio || p.horario?.fim ? `${p.horario.inicio || '*'} as ${p.horario.fim || '*'}` : '-';
 
+      const badgePrincipal = p.principal
+        ? `<span style="color: #fff; background: #28a745; font-size: 10px; margin-left: 8px; padding: 2px 6px; border-radius: 4px; font-weight: bold;">★ PRINCIPAL</span>`
+        : '';
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><input type="checkbox" class="chk-perfil" data-id="${p.id}"></td>
-        <td>${p.nome}</td>
+        <td>${p.nome} ${badgePrincipal}</td>
         <td>${dias}</td>
         <td>${horario}</td>
         <td style="text-align:center;">
           <div class="action-buttons">
+            <button class="btn-action btn-action-warning btn-principal-p" data-id="${p.id}" title="Definir como Perfil Principal das TVs">★</button>
             <button class="btn-action btn-action-info btn-editar-p" data-id="${p.id}" title="Editar">✎</button>
             <button class="btn-action btn-action-danger btn-excluir-p" data-id="${p.id}" title="Excluir">🗑</button>
           </div>
@@ -74,10 +101,10 @@ export function initProfiles() {
   }
 
   document.getElementById('btnNovoPerfil').addEventListener('click', () => {
-    // stdlib nativo para injetar uuid
     const novo = {
       id: crypto.randomUUID(),
       nome: 'Novo Perfil',
+      principal: perfisLocais.length === 0, // o primeiro criado sempre assume como principal
       dias_semana: [],
       urls_alvo: [],
       urls_exclusao: [],
@@ -97,6 +124,7 @@ export function initProfiles() {
     const mesclado = {
       id: crypto.randomUUID(),
       nome: 'Perfil Mesclado',
+      principal: perfisLocais.length === 0,
       horario: { inicio: '', fim: '' },
       dias_semana: [],
       urls_alvo: [],
@@ -128,7 +156,7 @@ export function initProfiles() {
     document.getElementById('perfilUrls').value = (p.urls_alvo || []).join('\n');
     document.getElementById('perfilUrlsExclusao').value = (p.urls_exclusao || []).join('\n');
 
-    document.getElementById('perfilStatusBar').checked = p.exibir_statusbar !== false; // fallback baseando-se no true
+    document.getElementById('perfilStatusBar').checked = p.exibir_statusbar !== false;
     document.getElementById('perfilAutoRefMin').value = p.autorefresh_min || 0;
     document.getElementById('perfilAutoRefSeg').value = p.autorefresh_seg || 0;
 
@@ -156,8 +184,10 @@ export function initProfiles() {
       fim: document.getElementById('perfilHoraFim').value
     };
 
+    const urlsAtuaisStr = JSON.stringify(p.urls_alvo || []);
     p.urls_alvo = document.getElementById('perfilUrls').value.split('\n').map(u => u.trim()).filter(u => u);
     p.urls_exclusao = document.getElementById('perfilUrlsExclusao').value.split('\n').map(u => u.trim()).filter(u => u);
+    const alterouUrls = urlsAtuaisStr !== JSON.stringify(p.urls_alvo);
 
     p.exibir_statusbar = document.getElementById('perfilStatusBar').checked;
     p.autorefresh_min = parseInt(document.getElementById('perfilAutoRefMin').value, 10) || 0;
@@ -166,18 +196,23 @@ export function initProfiles() {
     p.dias_semana = Array.from(document.querySelectorAll('#perfilDiasContainer input:checked'))
       .map(chk => parseInt(chk.value, 10));
 
-    salvarESincronizar();
+    salvarESincronizar(alterouUrls || p.principal);
+
     document.getElementById('btnVoltarPerfis').click();
   });
 
-  function salvarESincronizar() {
-    chrome.storage.local.set({ perfis: perfisLocais }, carregarPerfis);
+  function salvarESincronizar(pedirDownloadConfig = false) {
+    chrome.storage.local.set({ perfis: perfisLocais }, () => {
+      carregarPerfis();
+      if (pedirDownloadConfig) {
+        sugerirDownloadConfig();
+      }
+    });
   }
 
   carregarPerfis();
 }
 
-// export unificado para popular combos em multiplos modulos ao inves de buscar na arvore do dom
 export function atualizarSelectRotinas(perfis) {
   const selRotina = document.getElementById('rotinaPerfilId');
   const selPlaylist = document.getElementById('playlistPerfilId');
