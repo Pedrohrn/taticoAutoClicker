@@ -82,3 +82,6 @@ testes:
     - chrome iniciou/reiniciou? redefina os status, apague o lixo - windows ids, status etc
 
   - funcao de exportar/importar nunca deve importar/exportar status das funcoes, ids de janela, etc
+
+  - revisar os atalhos bash
+    - funcao pausar_tk está matando o chrome e retornando erro
