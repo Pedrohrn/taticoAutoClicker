@@ -75,3 +75,10 @@ testes:
   - script:
     - atualizar o link, deixar sem o menu (acesso direto aos painéis)
 
+### 13/09/2026
+
+  - limpar os status em configuracoes iniciais
+    - limpar os status ao fechar/reabrir janelas
+    - chrome iniciou/reiniciou? redefina os status, apague o lixo - windows ids, status etc
+
+  - funcao de exportar/importar nunca deve importar/exportar status das funcoes, ids de janela, etc
