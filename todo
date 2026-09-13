@@ -80,6 +80,7 @@ testes:
   - limpar os status em configuracoes iniciais
     - limpar os status ao fechar/reabrir janelas
     - chrome iniciou/reiniciou? redefina os status, apague o lixo - windows ids, status etc
+      - camId, micid, states, windowsstates
 
   - funcao de exportar/importar nunca deve importar/exportar status das funcoes, ids de janela, etc
 
