@@ -1,6 +1,16 @@
 {
+  "autoScrolls": [],
+  "autoStartEnabled": true,
+  "autoStartModules": {
+    "clicker": true,
+    "refresh": true,
+    "revolver": true
+  },
+  "autoStartResume": true,
   "perfis": [
     {
+      "autorefresh_min": 60,
+      "autorefresh_seg": 0,
       "dias_semana": [
         0,
         1,
@@ -10,17 +20,22 @@
         5,
         6
       ],
+      "exibir_statusbar": true,
       "horario": {
         "fim": "23:59",
         "inicio": "00:00"
       },
-      "id": "1785623989448",
-      "nome": "TVs Padaria",
+      "id": "1786766653046",
+      "nome": "TVS PADARIA",
+      "principal": true,
       "urls_alvo": [
         "https://app.powerbi.com/view?r=eyJrIjoiOTNkMGY3OGQtZjA0NC00MDE0LWI4N2UtN2FhZDllN2ZiNzY2IiwidCI6IjM2ODY2NjVlLTM3YjItNDBjNi05OTM1LTJkMzFkZmMwMThlNiJ9"
-      ]
+      ],
+      "urls_exclusao": []
     },
     {
+      "autorefresh_min": 60,
+      "autorefresh_seg": 0,
       "dias_semana": [
         0,
         1,
@@ -30,24 +45,27 @@
         5,
         6
       ],
+      "exibir_statusbar": true,
       "horario": {
         "fim": "23:59",
-        "inicio": "06:00"
+        "inicio": "00:00"
       },
-      "id": "1785811982936",
-      "nome": "TVs Açougue",
+      "id": "2de75bbf-6de5-4971-b65f-e741a8378826",
+      "nome": "TVS AÇOUGUE",
+      "principal": false,
       "urls_alvo": [
         "https://app.powerbi.com/view?r=eyJrIjoiYzBjNzRlNjUtY2FjOC00ZjM4LWExMDktMmU0OWE5MzY2NzQ2IiwidCI6IjM2ODY2NjVlLTM3YjItNDBjNi05OTM1LTJkMzFkZmMwMThlNiJ9"
-      ]
+      ],
+      "urls_exclusao": []
     }
   ],
-  "rotinaAtualNome": "PADARIA PAPILLON",
+  "playlists": [],
   "rotinas": [
     {
       "acionar_revolver": false,
       "ativa": true,
-      "autorefresh": false,
-      "autorefresh_min": 1,
+      "autorefresh": true,
+      "autorefresh_min": 60,
       "autorefresh_seg": 0,
       "condicao_parada": {
         "tipo": "css",
@@ -58,44 +76,37 @@
         "intermitencia_ms": 1000,
         "seletor_alvo": ""
       },
-      "id": "1785622457738",
+      "id": "1786766702405",
       "loop": false,
-      "nome": "PADARIA PAPILLON",
+      "nome": "PADARIA CAMPINAS",
       "passos_avancados": [
         {
           "acao": "click",
+          "ativo": true,
           "click_intervalo_ms": 1000,
-          "click_qtde": 1,
+          "click_qtde": 3,
           "delay_ms": 1000,
-          "id": "1785622461657",
+          "id": "1787703695287",
           "parada_seletor": "",
           "parada_tipo": "css",
-          "tipo_seletor": "css",
-          "valor_seletor": ".thumbnail-image"
-        },
-        {
-          "acao": "click",
-          "click_intervalo_ms": 1000,
-          "click_qtde": 1,
-          "delay_ms": 1000,
-          "id": "1785622479007",
-          "parada_seletor": "PAPILLON",
-          "parada_tipo": "text",
           "tipo_seletor": "css",
           "valor_seletor": ".pbi-glyph-chevronrightmedium"
         }
       ],
-      "perfil_id": "1785623989448",
+      "perfil_id": "1786766653046",
       "qtde_execucoes": 1,
       "revolver_playlist_id": "",
       "revolver_timeout_ms": 0,
+      "seletor_inicio": ".pbi-glyph-chevronrightmedium",
       "tipo": "avancada",
       "usa_parada": false
     }
   ],
   "statusBarClosed": false,
+  "statusBarCustomX": null,
+  "statusBarCustomY": null,
   "statusBarMinimized": false,
-  "statusBarPos": "bottom",
-  "statusBarAlign": "center",
-  "theme": "light"
+  "statusBarPos": "bottom-center",
+  "theme": "dark",
+  "windowStates": {}
 }
